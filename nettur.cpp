@@ -2,19 +2,19 @@
 	(C) 2000-2015  Petr Lastovicka
 	(C) 2015-2016  Tianyi Hao
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-	*/
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #include "hdr.h"
 #pragma hdrstop
 #ifndef TF_DISCONNECT
@@ -75,98 +75,86 @@ struct TstateClient {
 bool isServer, isClient;
 SOCKET sock;        //client socket
 SOCKET sock_l;      //listening socket 
-int port=3629;      //TCP/IP port
-int pollDelay=1000; //interval of asking for next game in server threads
+int port = 3629;      //TCP/IP port
+int pollDelay = 1000; //interval of asking for next game in server threads
 TdirName AIfolder;  //folder where AI are downloaded
 HANDLE clientThread;
 CRITICAL_SECTION netLock;
 Tclient clients[Mplayer]; //information about clients
-char servername[128]="localhost";
+char servername[128] = "localhost";
 
 //---------------------------------------------------------------
-int rd(SOCKET s, char *buf, int len)
-{
+int rd(SOCKET s, char *buf, int len) {
 	int i, n;
 
-	for(n=0; n<len;){
-		i=recv(s, buf+n, len-n, 0);
-		if(i<=0) return -1;
-		n+=i;
+	for (n = 0; n < len;) {
+		i = recv(s, buf + n, len - n, 0);
+		if (i <= 0) return -1;
+		n += i;
 	}
 	return 0;
 }
 
-int rd1(SOCKET s)
-{
+int rd1(SOCKET s) {
 	char buf;
-	if(rd(s, &buf, 1)) return -1;
+	if (rd(s, &buf, 1)) return -1;
 	return *(unsigned char*)&buf;
 }
 
-int rd2(SOCKET s)
-{
-	int r=rd1(s);
-	return (r<<8)|rd1(s);
+int rd2(SOCKET s) {
+	int r = rd1(s);
+	return (r << 8) | rd1(s);
 }
 
-int rd4(SOCKET s)
-{
-	int r=rd1(s);
-	r=(r<<8)|rd1(s);
-	r=(r<<8)|rd1(s);
-	return (r<<8)|rd1(s);
+int rd4(SOCKET s) {
+	int r = rd1(s);
+	r = (r << 8) | rd1(s);
+	r = (r << 8) | rd1(s);
+	return (r << 8) | rd1(s);
 }
 
-int wr(SOCKET s, char *buf, int len)
-{
+int wr(SOCKET s, char *buf, int len) {
 	int i, n;
 
-	for(n=0; n<len;){
-		i=send(s, buf+n, len-n, 0);
-		if(i==SOCKET_ERROR) return -1;
-		n+=i;
+	for (n = 0; n < len;) {
+		i = send(s, buf + n, len - n, 0);
+		if (i == SOCKET_ERROR) return -1;
+		n += i;
 	}
 	return 0;
 }
 
-int wr1(SOCKET s, int i)
-{
-	char buf=(char)i;
+int wr1(SOCKET s, int i) {
+	char buf = (char)i;
 	return wr(s, &buf, 1);
 }
 
-int rd(char *buf, int len)
-{
+int rd(char *buf, int len) {
 	return rd(sock, buf, len);
 }
 
-int rd1()
-{
+int rd1() {
 	return rd1(sock);
 }
 
-int rd2()
-{
+int rd2() {
 	return rd2(sock);
 }
 
-int rd4()
-{
+int rd4() {
 	return rd4(sock);
 }
 
-int wr(char *buf, int len)
-{
+int wr(char *buf, int len) {
 	return wr(sock, buf, len);
 }
 
-int wr1(int i)
-{
+int wr1(int i) {
 	return wr1(sock, i);
 }
 
 //---------------------------------------------------------------
-const DWORD crcTable[256]={
+const DWORD crcTable[256] = {
 	0x00000000, 0x77073096, 0xEE0E612C, 0x990951BA,
 	0x076DC419, 0x706AF48F, 0xE963A535, 0x9E6495A3,
 	0x0EDB8832, 0x79DCB8A4, 0xE0D5E91E, 0x97D2D988,
@@ -230,87 +218,82 @@ const DWORD crcTable[256]={
 	0xBDBDF21C, 0xCABAC28A, 0x53B39330, 0x24B4A3A6,
 	0xBAD03605, 0xCDD70693, 0x54DE5729, 0x23D967BF,
 	0xB3667A2E, 0xC4614AB8, 0x5D681B02, 0x2A6F2B94,
-	0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02EF8D};
+	0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02EF8D };
 
 
-int calcCRC(const char *fn, DWORD &result)
-{
+int calcCRC(const char *fn, DWORD &result) {
 	HANDLE h;
 	DWORD crc;
 	DWORD i, r;
 	BYTE buf[4096];
 	TfileName path;
 
-	r=searchAI(fn, sizeof(path), path, 0);
-	h=CreateFile((r>0 && r<sizeof(path)) ? path : fn, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, 0);
-	if(h==INVALID_HANDLE_VALUE) return 1;
-	crc=0xffffffff;
-	do{
-		if(!ReadFile(h, buf, sizeof(buf), &r, 0)){ CloseHandle(h); return 2; }
-		for(i=0; i<r; i++){
-			crc = (crc>>8) ^ crcTable[buf[i] ^ (crc & 0xFF)];
+	r = searchAI(fn, sizeof(path), path, 0);
+	h = CreateFile((r > 0 && r < sizeof(path)) ? path : fn, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, 0);
+	if (h == INVALID_HANDLE_VALUE) return 1;
+	crc = 0xffffffff;
+	do {
+		if (!ReadFile(h, buf, sizeof(buf), &r, 0)) { CloseHandle(h); return 2; }
+		for (i = 0; i < r; i++) {
+			crc = (crc >> 8) ^ crcTable[buf[i] ^ (crc & 0xFF)];
 		}
-	} while(r);
+	} while (r);
 	CloseHandle(h);
-	crc= ~crc;
-	result=crc;
+	crc = ~crc;
+	result = crc;
 	return 0;
 }
 //---------------------------------------------------------------
-int recvFile(SOCKET s, const char *fn, int len)
-{
+int recvFile(SOCKET s, const char *fn, int len) {
 	HANDLE h;
 	int i, n;
 	DWORD w;
 	char buf[4096];
 
-	h=CreateFile(fn, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
-	if(h==INVALID_HANDLE_VALUE) return 2;
+	h = CreateFile(fn, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+	if (h == INVALID_HANDLE_VALUE) return 2;
 
-	for(n=0; n<len;){
-		i=recv(s, buf, min(len-n, sizeof(buf)), 0);
-		if(i<=0) break;
+	for (n = 0; n < len;) {
+		i = recv(s, buf, min(len - n, sizeof(buf)), 0);
+		if (i <= 0) break;
 		WriteFile(h, buf, i, &w, 0);
-		n+=i;
+		n += i;
 	}
 	CloseHandle(h);
-	return n!=len;
+	return n != len;
 }
 //---------------------------------------------------------------
 //get players id for a next game
-bool turNext(Tclient *client)
-{
-	bool result=false, stillActive=false;
+bool turNext(Tclient *client) {
+	bool result = false, stillActive = false;
 
 	EnterCriticalSection(&netLock);
-	if(turNplayers){
-		if(client->player[0]>=0){
-			result=true;
-		}
-		else if(turCurRepeat>0){
+	if (turNplayers) {
+		if (client->player[0] >= 0) {
+			result = true;
+		} else if (turCurRepeat > 0) {
 			turNext();
-			if(turCurRepeat>0){
-				client->player[0]= players[0].turPlayerId;
-				client->player[1]= players[1].turPlayerId;
-				client->gameCount=0;
-				client->repeatCount= turRepeat-turCurRepeat;
-				result=true;
+			if (turCurRepeat > 0) {
+				client->player[0] = players[0].turPlayerId;
+				client->player[1] = players[1].turPlayerId;
+				client->gameCount = 0;
+				client->repeatCount = turRepeat - turCurRepeat;
+				result = true;
 			}
 		}
-		if(!result){
-			for(int i=0; i<Mplayer; i++){
-				Tclient *c=&clients[i];
-				if(c->player[0]>=0){
-					if(c->thread){
-						stillActive=true;
-					}
-					else{
-						client->player[0]= c->player[0];
-						client->player[1]= c->player[1];
-						client->repeatCount= c->repeatCount;
-						client->gameCount= c->gameCount;
-						c->player[0]=-1;
-						result=true;
+		if (!result) {
+			for (int i = 0; i < Mplayer; i++) {
+				Tclient *c = &clients[i];
+				if (c->player[0] >= 0) {
+					if (c->thread) {
+						stillActive = true;
+					} else {
+						client->player[0] = c->player[0];
+						client->player[1] = c->player[1];
+						client->repeatCount = c->repeatCount;
+						client->gameCount = c->gameCount;
+						c->player[0] = -1;
+						result = true;
 						break;
 					}
 				}
@@ -319,167 +302,161 @@ bool turNext(Tclient *client)
 		win7TaskbarProgress.SetProgressState(hWin, TBPF_NORMAL);
 		win7TaskbarProgress.SetProgressValue(hWin, turGamesCounter, turGamesTotal);
 
-		if(!result && !stillActive){
+		if (!result && !stillActive) {
 			wrLog(lng(850, "Tournament finished"));
 			show(resultDlg);
-			turNplayers=0;
+			turNplayers = 0;
 			killBrains();
-			opening=turOpening + turMatchRepeat*turRepeat/2;
+			opening = turOpening + turMatchRepeat * turRepeat / 2;
 			executeCmd(cmdTurEnd);
 			win7TaskbarProgress.SetProgressState(hWin, TBPF_NOPROGRESS);
 		}
-		client->opening= turOpening + (client->repeatCount*turMatchRepeat + client->gameCount)/2;
-		players[0].isComp=players[1].isComp=1;
-		players[1].timeMove=players[0].timeMove;
-		players[1].timeGame=players[0].timeGame;
+		client->opening = turOpening + (client->repeatCount*turMatchRepeat + client->gameCount) / 2;
+		players[0].isComp = players[1].isComp = 1;
+		players[1].timeMove = players[0].timeMove;
+		players[1].timeGame = players[0].timeGame;
 	}
 	LeaveCriticalSection(&netLock);
 	return result;
 }
 //---------------------------------------------------------------
-void TgameSettings::use()
-{
-	players[1].timeMove= players[0].timeMove= timeMove;
-	players[1].timeGame= players[0].timeGame= timeGame;
-	::tolerance= tolerance;
-	maxMemory= memory;
-	::width=width;
-	::height=height;
-	suspendAI=suspend&1;
-	debugAI=(suspend>>1)&1;
-	turTieRepeat=tieRepeat;
-	turLogMsg=messages;
-	::ruleFive=ruleFive;
-}
-
-void TgameSettings::fill()
-{
-	timeGame=players[0].timeGame;
-	timeMove=players[0].timeMove;
-	tolerance=::tolerance;
-	memory=maxMemory;
-	width=(char)::width;
-	height=(char)::height;
-	suspend=(char)((suspendAI!=0)|((debugAI!=0)<<1));
-	sendMoves=(char)turRecord;
-	tieRepeat=(char)turTieRepeat;
-	messages=(char)turLogMsg;
-	ruleFive=(char)::ruleFive;
-	openingData[0]=0;
-}
-
-void TturSettings::use()
-{
-	players[1].timeMove= players[0].timeMove= timeMove;
-	players[1].timeGame= players[0].timeGame= timeGame;
-	maxMemory= memory;
-	::width=width;
-	::height=height;
-	turDateTime=date;
-	players[0].turPlayerId=id[0];
-	players[1].turPlayerId=id[1];
-	turOpening=opening;
-	::autoBegin=autoBegin;
-	turRule=rule;
-	turGamesCounter=gameCount;
-	amin(turRepeat, repeat);
-	turCurRepeat=turRepeat-repeat;
-	turMatchRepeat= matchRepeat ? matchRepeat : 2;
-	openingRandomShiftT=openingRandomShift;
-	::autoBeginForce=autoBeginForce;
+void TgameSettings::use() {
+	players[1].timeMove = players[0].timeMove = timeMove;
+	players[1].timeGame = players[0].timeGame = timeGame;
+	::tolerance = tolerance;
+	maxMemory = memory;
+	::width = width;
+	::height = height;
+	suspendAI = suspend & 1;
+	debugAI = (suspend >> 1) & 1;
+	turTieRepeat = tieRepeat;
+	turLogMsg = messages;
 	::ruleFive = ruleFive;
 }
 
-void TturSettings::fill()
-{
-	version=STATE_VERSION;
-	playerStrLen=strlen(turPlayerStr);
-	timeGame=players[0].timeGame;
-	timeMove=players[0].timeMove;
-	memory=maxMemory;
-	width=(char)::width;
-	height=(char)::height;
-	date=turDateTime;
-	id[0]=(short)players[0].turPlayerId;
-	id[1]=(short)players[1].turPlayerId;
-	opening=(short)turOpening;
-	autoBegin=(char)::autoBegin;
-	rule=(char)turRule;
-	gameCount=(short)turGamesCounter;
-	repeat=(short)(turRepeat-turCurRepeat);
-	matchRepeat=(short)turMatchRepeat;
-	openingRandomShift=(char)openingRandomShiftT;
-	autoBeginForce=::autoBeginForce;
+void TgameSettings::fill() {
+	timeGame = players[0].timeGame;
+	timeMove = players[0].timeMove;
+	tolerance = ::tolerance;
+	memory = maxMemory;
+	width = (char)::width;
+	height = (char)::height;
+	suspend = (char)((suspendAI != 0) | ((debugAI != 0) << 1));
+	sendMoves = (char)turRecord;
+	tieRepeat = (char)turTieRepeat;
+	messages = (char)turLogMsg;
+	ruleFive = (char)::ruleFive;
+	openingData[0] = 0;
+}
+
+void TturSettings::use() {
+	players[1].timeMove = players[0].timeMove = timeMove;
+	players[1].timeGame = players[0].timeGame = timeGame;
+	maxMemory = memory;
+	::width = width;
+	::height = height;
+	turDateTime = date;
+	players[0].turPlayerId = id[0];
+	players[1].turPlayerId = id[1];
+	turOpening = opening;
+	::autoBegin = autoBegin;
+	turRule = rule;
+	turGamesCounter = gameCount;
+	amin(turRepeat, repeat);
+	turCurRepeat = turRepeat - repeat;
+	turMatchRepeat = matchRepeat ? matchRepeat : 2;
+	openingRandomShiftT = openingRandomShift;
+	::autoBeginForce = autoBeginForce;
+	::ruleFive = ruleFive;
+}
+
+void TturSettings::fill() {
+	version = STATE_VERSION;
+	playerStrLen = strlen(turPlayerStr);
+	timeGame = players[0].timeGame;
+	timeMove = players[0].timeMove;
+	memory = maxMemory;
+	width = (char)::width;
+	height = (char)::height;
+	date = turDateTime;
+	id[0] = (short)players[0].turPlayerId;
+	id[1] = (short)players[1].turPlayerId;
+	opening = (short)turOpening;
+	autoBegin = (char)::autoBegin;
+	rule = (char)turRule;
+	gameCount = (short)turGamesCounter;
+	repeat = (short)(turRepeat - turCurRepeat);
+	matchRepeat = (short)turMatchRepeat;
+	openingRandomShift = (char)openingRandomShiftT;
+	autoBeginForce = ::autoBeginForce;
 	ruleFive = ::ruleFive;
 }
 
 //reload tournament state from a file
-int rdState()
-{
+int rdState() {
 	FILE *f;
-	int i, n, len, err=1;
+	int i, n, len, err = 1;
 	Tclient *c;
 	char buf[512];
 
-	f=fopen(fnstate, "rb");
-	if(f){
+	f = fopen(fnstate, "rb");
+	if (f) {
 		{
-			len=fgetc(f);
-			if(len==EOF) goto le;
+			len = fgetc(f);
+			if (len == EOF) goto le;
 			memset(buf, 0, sizeof(TturSettings));
-			if(fread(buf, len, 1, f)!=1) goto le;
-			TturSettings &ts=*(TturSettings*)buf;
-			if(ts.version!=STATE_VERSION) goto le;
+			if (fread(buf, len, 1, f) != 1) goto le;
+			TturSettings &ts = *(TturSettings*)buf;
+			if (ts.version != STATE_VERSION) goto le;
 			ts.use();
-			if(ts.playerStrLen>=sizeof(turPlayerStr)) goto le;
-			if(fread(turPlayerStr, ts.playerStrLen, 1, f)!=1) goto le;
-			turPlayerStr[ts.playerStrLen]=0;
+			if (ts.playerStrLen >= sizeof(turPlayerStr)) goto le;
+			if (fread(turPlayerStr, ts.playerStrLen, 1, f) != 1) goto le;
+			turPlayerStr[ts.playerStrLen] = 0;
 		}
-		if(getNplayers()) goto le;
-		n=fgetc(f);
-		if(n>Mplayer) goto le;
-		len=fgetc(f);
-		if(len==EOF) goto le;
-		for(i=0; i<n; i++){
+		if (getNplayers()) goto le;
+		n = fgetc(f);
+		if (n > Mplayer) goto le;
+		len = fgetc(f);
+		if (len == EOF) goto le;
+		for (i = 0; i < n; i++) {
 			memset(buf, 0, sizeof(TstateClient));
-			if(fread(buf, len, 1, f)!=1) goto le;
-			TstateClient &sc=*(TstateClient*)buf;
-			c=&clients[i];
-			c->player[0]=sc.player[0];
-			c->player[1]=sc.player[1];
-			c->repeatCount= sc.repeatCount;
-			c->gameCount= sc.gameCount;
-			c->IP= sc.IP;
+			if (fread(buf, len, 1, f) != 1) goto le;
+			TstateClient &sc = *(TstateClient*)buf;
+			c = &clients[i];
+			c->player[0] = sc.player[0];
+			c->player[1] = sc.player[1];
+			c->repeatCount = sc.repeatCount;
+			c->gameCount = sc.gameCount;
+			c->IP = sc.IP;
 		}
-		len=fgetc(f);
-		if(len<0 || len>sizeof(TturPlayer)) goto le;
-		memset(turTable, 0, turNplayers*sizeof(TturPlayer));
-		for(i=0; i<turNplayers; i++){
-			fread(turTable+i, len, 1, f);
+		len = fgetc(f);
+		if (len<0 || len>sizeof(TturPlayer)) goto le;
+		memset(turTable, 0, turNplayers * sizeof(TturPlayer));
+		for (i = 0; i < turNplayers; i++) {
+			fread(turTable + i, len, 1, f);
 		}
-		len=fgetc(f);
-		if(len<0 || len>sizeof(TturCell)) goto le;
-		memset(turCells, 0, turNplayers*turNplayers*sizeof(TturCell));
-		for(i=0; i<turNplayers*turNplayers; i++){
-			fread(turCells+i, len, 1, f);
+		len = fgetc(f);
+		if (len<0 || len>sizeof(TturCell)) goto le;
+		memset(turCells, 0, turNplayers*turNplayers * sizeof(TturCell));
+		for (i = 0; i < turNplayers*turNplayers; i++) {
+			fread(turCells + i, len, 1, f);
 		}
-		if(fgetc(f)==156) err=0;
+		if (fgetc(f) == 156) err = 0;
 	le:
 		fclose(f);
 	}
-	if(err){
-		for(int i=0; i<Mplayer; i++){
-			clients[i].player[0]=-1;
+	if (err) {
+		for (int i = 0; i < Mplayer; i++) {
+			clients[i].player[0] = -1;
 		}
-		turNplayers=0;
+		turNplayers = 0;
 		msglng(815, "Cannot load a tournament state");
 	}
 	return err;
 }
 
 //store tournament state to a file
-void wrState()
-{
+void wrState() {
 	FILE *f;
 	int i, n;
 	Tclient *c;
@@ -487,28 +464,28 @@ void wrState()
 	TturSettings ts;
 	TfileName fn, fn2;
 
-	if(!turNplayers) return;
+	if (!turNplayers) return;
 	strcpy(getTurDir(fn), fnStateTmp);
-	f=fopen(fn, "wb");
-	if(!f) return;
+	f = fopen(fn, "wb");
+	if (!f) return;
 	ts.fill();
 	fputc(sizeof(TturSettings), f);
 	fwrite(&ts, sizeof(ts), 1, f);
 	fputs(turPlayerStr, f);
-	n=0;
-	for(i=0; i<Mplayer; i++){
-		if(clients[i].player[0]>=0) n++;
+	n = 0;
+	for (i = 0; i < Mplayer; i++) {
+		if (clients[i].player[0] >= 0) n++;
 	}
 	fputc(n, f);
 	fputc(sizeof(TstateClient), f);
-	for(i=0; i<Mplayer; i++){
-		c=&clients[i];
-		if(c->player[0]>=0){
-			sc.player[0]=(short)c->player[0];
-			sc.player[1]=(short)c->player[1];
-			sc.repeatCount=(short)c->repeatCount;
-			sc.gameCount=(short)c->gameCount;
-			sc.IP=c->IP;
+	for (i = 0; i < Mplayer; i++) {
+		c = &clients[i];
+		if (c->player[0] >= 0) {
+			sc.player[0] = (short)c->player[0];
+			sc.player[1] = (short)c->player[1];
+			sc.repeatCount = (short)c->repeatCount;
+			sc.gameCount = (short)c->gameCount;
+			sc.IP = c->IP;
 			fwrite(&sc, sizeof(sc), 1, f);
 		}
 	}
@@ -517,7 +494,7 @@ void wrState()
 	fputc(sizeof(TturCell), f);
 	fwrite(turCells, sizeof(TturCell), turNplayers*turNplayers, f);
 	fputc(156, f);
-	if(!fclose(f)){
+	if (!fclose(f)) {
 		strcpy(getTurDir(fn2), fnState);
 		DeleteFile(fn2);
 		MoveFile(fn, fn2);
@@ -525,27 +502,25 @@ void wrState()
 }
 //---------------------------------------------------------------
 //cleanup on client
-void clientDone()
-{
+void clientDone() {
 	EnterCriticalSection(&netLock);
-	if(clientThread){
+	if (clientThread) {
 		killBrains();
 		closesocket(sock);
-		sock=INVALID_SOCKET;
+		sock = INVALID_SOCKET;
 		WSACleanup();
 		wrLog(lng(853, "Disconnected from server"));
 		CloseHandle(clientThread);
-		clientThread=0;
-		isClient=false;
-		turNplayers=0;
+		clientThread = 0;
+		isClient = false;
+		turNplayers = 0;
 	}
 	LeaveCriticalSection(&netLock);
 	drawTitle();
 }
 //---------------------------------------------------------------
 //main function for a client thread
-DWORD WINAPI clientLoop(void *)
-{
+DWORD WINAPI clientLoop(void *) {
 	int i, j, len, x, y, c, pathLen;
 	Tplayer *p;
 	TgameSettings *b;
@@ -557,40 +532,40 @@ DWORD WINAPI clientLoop(void *)
 	char sendMoves;
 	TfileName fnmsg;
 
-	pathLen=(int)strlen(AIfolder);
+	pathLen = (int)strlen(AIfolder);
 	getMsgFn(fnmsg);
 lstart:
-	for(;;){
+	for (;;) {
 		killBrains();
 		//wait for server
-		c=rd1();
-		if(c!=92) break;
+		c = rd1();
+		if (c != 92) break;
 		//receive players
-		for(i=0; i<2; i++){
-			p=&players[i];
-			p->turPlayerId=i;
-			p->isComp=1;
-			if(rd(buf, 9)<0) goto lend;
-			len=(unsigned char)buf[8];
-			if(!len) goto lstart;
+		for (i = 0; i < 2; i++) {
+			p = &players[i];
+			p->turPlayerId = i;
+			p->isComp = 1;
+			if (rd(buf, 9) < 0) goto lend;
+			len = (unsigned char)buf[8];
+			if (!len) goto lstart;
 			strcpy(p->brain, AIfolder);
-			s=p->brain+pathLen;
-			if(pathLen && s[-1]!='\\') *s++='\\';
-			if(pathLen+len+1>=sizeof(p->brain)){
+			s = p->brain + pathLen;
+			if (pathLen && s[-1] != '\\') *s++ = '\\';
+			if (pathLen + len + 1 >= sizeof(p->brain)) {
 				wrLog("File name is too long");
 				wr1(0);
 				goto lend;
 			}
-			if(rd(s, len)<0) goto lend;
-			s[len]=0;
-			len=*(DWORD*)buf;
-			crcS=*(DWORD*)(buf+4);
-			if(calcCRC(p->brain, crcC) || crcC!=crcS){
+			if (rd(s, len) < 0) goto lend;
+			s[len] = 0;
+			len = *(DWORD*)buf;
+			crcS = *(DWORD*)(buf + 4);
+			if (calcCRC(p->brain, crcC) || crcC != crcS) {
 				wr1(229);
 				wrLog(lng(851, "Receiving %s"), p->brain);
 				recvFile(sock, p->brain, len);
-				if(calcCRC(p->brain, crcC) || crcC!=crcS){
-					p->brain2[0]=0;
+				if (calcCRC(p->brain, crcC) || crcC != crcS) {
+					p->brain2[0] = 0;
 					wr1(221);
 					wrLog("Download failed");
 					goto lend;
@@ -600,90 +575,88 @@ lstart:
 			wr1(118);//OK
 		}
 		//receive game settings
-		c=rd1();
-		len=rd1();
-		if(c!=1 || len!=sizeof(TgameSettings)){
+		c = rd1();
+		len = rd1();
+		if (c != 1 || len != sizeof(TgameSettings)) {
 			wrLog(lng(884, "Server is running different version of Piskvork than client"));
 			show(logDlg);
 			break;
 		}
-		if(rd(buf, len)<0) goto lend;
-		b=(TgameSettings*)buf;
-		j=b->openingData[0];
-		if(rd(buf+len, j*2)<0) goto lend;
+		if (rd(buf, len) < 0) goto lend;
+		b = (TgameSettings*)buf;
+		j = b->openingData[0];
+		if (rd(buf + len, j * 2) < 0) goto lend;
 		b->use();
-		sendMoves=b->sendMoves;
+		sendMoves = b->sendMoves;
 		//start game
-		memset(turTable, 0, 2*sizeof(TturPlayer));
-		turTieCounter=0;
+		memset(turTable, 0, 2 * sizeof(TturPlayer));
+		turTieCounter = 0;
 		DeleteFile(fnmsg);
 		newGame(0, false);
 		//automatic opening
-		if(j){
-			o=(signed char*)b->openingData;
-			for(; j>0; j--){
-				x= *++o;
-				y= *++o;
+		if (j) {
+			o = (signed char*)b->openingData;
+			for (; j > 0; j--) {
+				x = *++o;
+				y = *++o;
 				doMove1(Square(x, y));
 			}
-			startMoves=moves;
+			startMoves = moves;
 		}
 		resume();
 		//wait until the match is finished
-		c=rd1();
-		if(c!=137) break;
+		c = rd1();
+		if (c != 137) break;
 		//send results
 		wr1(sizeof(TturPlayer));
-		for(i=0; i<2; i++){
+		for (i = 0; i < 2; i++) {
 			wr((char*)&turTable[i], sizeof(TturPlayer));
 		}
 		//send board
-		len=3;
-		if(sendMoves){
-			len+=moves*6;
+		len = 3;
+		if (sendMoves) {
+			len += moves * 6;
 		}
-		s=A=new char[len];
-		*s++=(char)(moves>>8);
-		*s++=(char)moves;
-		if(sendMoves && moves){
-			*s++=6;
-			for(q=lastMove; q->nxt; q=q->nxt);
-			for(; q; q=q->pre){
-				*s++= (char)q->x;
-				*s++= (char)q->y;
-				*(DWORD*)s= q->time;
-				s+=4;
+		s = A = new char[len];
+		*s++ = (char)(moves >> 8);
+		*s++ = (char)moves;
+		if (sendMoves && moves) {
+			*s++ = 6;
+			for (q = lastMove; q->nxt; q = q->nxt);
+			for (; q; q = q->pre) {
+				*s++ = (char)q->x;
+				*s++ = (char)q->y;
+				*(DWORD*)s = q->time;
+				s += 4;
 			}
-		}
-		else{
-			*s=0;
+		} else {
+			*s = 0;
 		}
 		wr(A, len);
 		delete[] A;
 		//send messages
-		fileSize=0;
-		if(turLogMsg){
-			h=CreateFile(fnmsg, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
-			if(h!=INVALID_HANDLE_VALUE){
-				fileSize=GetFileSize(h, 0);
+		fileSize = 0;
+		if (turLogMsg) {
+			h = CreateFile(fnmsg, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+			if (h != INVALID_HANDLE_VALUE) {
+				fileSize = GetFileSize(h, 0);
 				wr((char*)&fileSize, 4);
 				TransmitFile(sock, h, 0, 0, 0, 0, 0);
 			}
 			CloseHandle(h);
 		}
-		if(!fileSize) wr((char*)&fileSize, 4);
+		if (!fileSize) wr((char*)&fileSize, 4);
 	}
-	if(c==231) wrLog(lng(852, "Tournament aborted"));
+	if (c == 231) wrLog(lng(852, "Tournament aborted"));
 lend:
 	clientDone();
 	return 0;
 }
 //---------------------------------------------------------------
 //main function for server threads
-DWORD WINAPI serverLoop(void *param)
-{
-	int clientId= (int)param;
-	Tclient *client= &clients[clientId];
+DWORD WINAPI serverLoop(void *param) {
+	int clientId = (int)param;
+	Tclient *client = &clients[clientId];
 	TturCell *ce;
 	SOCKET sock_c;
 	TturPlayer *tt[2], *rr[2], *t, *r;
@@ -696,138 +669,138 @@ DWORD WINAPI serverLoop(void *param)
 	char *s, *A, *q, *M;
 	signed char *o1, *o2;
 	char buf[512];
-	char *resultBuf[2]={buf, buf+256};
+	char *resultBuf[2] = { buf, buf + 256 };
 	TfileName fn;
 
-	for(;;){
+	for (;;) {
 		//wait for a tournament
-		while(!turNext(client)){
-			if(ioctlsocket(client->socket, FIONREAD, &u) || u) goto lend;
+		while (!turNext(client)) {
+			if (ioctlsocket(client->socket, FIONREAD, &u) || u) goto lend;
 			Sleep(pollDelay);
 		}
-		sock_c= client->socket;
-		if(wr1(sock_c, 92)<0) goto lend;
+		sock_c = client->socket;
+		if (wr1(sock_c, 92) < 0) goto lend;
 		//send players
-		for(i=0; i<2; i++){
-			tt[i]=&turTable[client->player[i]];
-			const int H=9;
-			s=buf+H;
+		for (i = 0; i < 2; i++) {
+			tt[i] = &turTable[client->player[i]];
+			const int H = 9;
+			s = buf + H;
 			turGetBrain(client->player[i], fn, sizeof(fn), false);
-			searchAI(fn, sizeof(buf)-H, s, 0);
-			h=CreateFile(s, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
-			s=cutPath(s);
-			if(h==INVALID_HANDLE_VALUE){
+			searchAI(fn, sizeof(buf) - H, s, 0);
+			h = CreateFile(s, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+			s = cutPath(s);
+			if (h == INVALID_HANDLE_VALUE) {
 				wrLog("Cannot open %s", fn);
 				goto lend;
 			}
-			fileSize=GetFileSize(h, 0);
-			len=(int)strlen(s);
-			s[-1]=(char)len;
-			*(DWORD*)(s-9)=fileSize;
-			*(DWORD*)(s-5)=tt[i]->crc;
-			wr(sock_c, s-H, len+H);
-			c=rd1(sock_c);
-			if(c==229){
+			fileSize = GetFileSize(h, 0);
+			len = (int)strlen(s);
+			s[-1] = (char)len;
+			*(DWORD*)(s - 9) = fileSize;
+			*(DWORD*)(s - 5) = tt[i]->crc;
+			wr(sock_c, s - H, len + H);
+			c = rd1(sock_c);
+			if (c == 229) {
 				//client does not have the AI
 				wrLog(lng(854, "Transmit %s to Client %d, size=%u"), s, clientId, fileSize);
 				TransmitFile(sock_c, h, 0, 0, 0, 0, 0);
-				c=rd1(sock_c);
+				c = rd1(sock_c);
 			}
 			CloseHandle(h);
-			if(c!=118) goto lend;
+			if (c != 118) goto lend;
 		}
 		//older versions did not check TgameSettings length properly, this byte will disconnect them
-		buf[0]=1; //must be less than 8
+		buf[0] = 1; //must be less than 8
 		//send game settings
-		b=(TgameSettings*)(buf+2);
-		buf[1]=sizeof(TgameSettings);
+		b = (TgameSettings*)(buf + 2);
+		buf[1] = sizeof(TgameSettings);
 		b->fill();
 		//send opening
-		if(autoBegin || autoBeginForce){
+		if (autoBegin || autoBeginForce) {
 			int x0, y0, r, j, x, y;
-			o1= getOpening(client->opening);
-			o2= (signed char*)b->openingData;
-			j= *o2 = *o1;
-			x0= width/2;
-			y0= height/2;
-			r= 0;
-			if(openingRandomShiftT){
-				x0 += rnd(4)-2;
-				y0 += rnd(4)-2;
+			o1 = getOpening(client->opening);
+			o2 = (signed char*)b->openingData;
+			j = *o2 = *o1;
+			x0 = width / 2;
+			y0 = height / 2;
+			r = 0;
+			if (openingRandomShiftT) {
+				x0 += rnd(4) - 2;
+				y0 += rnd(4) - 2;
 				r = rnd(8);
 			}
-			for(; j>0; j--){
-				x= *++o1;
-				y= *++o1;
-				if(r&1) x=-x;
-				if(r&2) y=-y;
-				if(r&4) w=x, x=y, y=w;
-				*++o2 = (signed char)(x0+x);
-				*++o2 = (signed char)(y0+y);
+			for (; j > 0; j--) {
+				x = *++o1;
+				y = *++o1;
+				if (r & 1) x = -x;
+				if (r & 2) y = -y;
+				if (r & 4) w = x, x = y, y = w;
+				*++o2 = (signed char)(x0 + x);
+				*++o2 = (signed char)(y0 + y);
 			}
 		}
-		wr(sock_c, buf, 2+sizeof(TgameSettings)+2*b->openingData[0]);
+		wr(sock_c, buf, 2 + sizeof(TgameSettings) + 2 * b->openingData[0]);
 		wrLog(lng(855, "Game started: players %d x %d,  Client %d"),
 			client->player[0], client->player[1], clientId);
 		//wait
-		if(rd1(sock_c)!=173) goto lend;
+		if (rd1(sock_c) != 173) goto lend;
 		wr1(sock_c, 137);
 		//receive game results
-		len=rd1(sock_c);
-		if(len<0) goto lend;
-		for(i=0; i<2; i++){
+		len = rd1(sock_c);
+		if (len < 0) goto lend;
+		for (i = 0; i < 2; i++) {
 			memset(resultBuf[i], 0, sizeof(TturPlayer));
-			if(rd(sock_c, resultBuf[i], len)<0) goto lend;
-			r=rr[i]=(TturPlayer*)resultBuf[i];
-			if(unsigned(r->wins+r->winsE+r->losses+r->errors+r->timeouts)>1){
+			if (rd(sock_c, resultBuf[i], len) < 0) goto lend;
+			r = rr[i] = (TturPlayer*)resultBuf[i];
+			if (unsigned(r->wins + r->winsE + r->losses + r->errors + r->timeouts) > 1) {
 				wrLog("Invalid result received !");
 				goto lend;
 			}
 		}
 		//receive board
-		m=(rd1(sock_c)<<8)|rd1(sock_c);
-		len1=rd1(sock_c);
-		if(len1<0) goto lend;
-		len=m*len1;
-		A=0;
-		if(len>0){
-			A=new char[len];
-			if(rd(sock_c, A, len)<0){ delete[] A; goto lend; }
+		m = (rd1(sock_c) << 8) | rd1(sock_c);
+		len1 = rd1(sock_c);
+		if (len1 < 0) goto lend;
+		len = m * len1;
+		A = 0;
+		if (len > 0) {
+			A = new char[len];
+			if (rd(sock_c, A, len) < 0) { delete[] A; goto lend; }
 		}
 		//receive messages
-		if(rd(sock_c, (char*)&fileSize, 4)<0 || fileSize>16000000){ delete[] A; goto lend; }
-		M=0;
-		if(fileSize>0){
-			M=new char[fileSize];
-			if(rd(sock_c, M, fileSize)<0){ delete[] A; delete[] M; goto lend; }
+		if (rd(sock_c, (char*)&fileSize, 4) < 0 || fileSize > 16000000) { delete[] A; goto lend; }
+		M = 0;
+		if (fileSize > 0) {
+			M = new char[fileSize];
+			if (rd(sock_c, M, fileSize) < 0) { delete[] A; delete[] M; goto lend; }
 		}
 		//add game result to the tournament table
 		EnterCriticalSection(&netLock);
-		for(i=0; i<2; i++){
-			r=rr[i];
-			t=tt[i];
+		for (i = 0; i < 2; i++) {
+			r = rr[i];
+			t = tt[i];
 			t->Ngames++;
-			t->Nmoves+=r->Nmoves;
-			t->time+=r->time;
-			t->losses+=r->losses;
-			t->losses1+=r->losses1;
-			t->errors+=r->errors;
-			t->timeouts+=r->timeouts;
-			t->wins+=r->wins;
-			t->wins1+=r->wins1;
-			t->winsE+=r->winsE;
+			t->Nmoves += r->Nmoves;
+			t->time += r->time;
+			t->losses += r->losses;
+			t->losses1 += r->losses1;
+			t->errors += r->errors;
+			t->timeouts += r->timeouts;
+			t->wins += r->wins;
+			t->wins1 += r->wins1;
+			t->winsE += r->winsE;
 			amin(t->memory, r->memory);
 			amin(t->maxTurnTime, r->maxTurnTime);
-			ce= getCell(client->player[1-i], client->player[i]);
-			if(r->wins) if(i==0) ce->start++; else ce->notStart++;
-			if(r->winsE) ce->error++;
+			ce = getCell(client->player[1 - i], client->player[i]);
+			if (r->wins) if (i == 0) ce->start++; else ce->notStart++;
+			if (r->winsE) ce->error++;
 		}
 		//save messages
 		wrMsgNewGame(client->player[0], client->player[1]);
-		if(M){
+		if (M) {
 			getMsgFn(fn);
-			h=CreateFile(fn, GENERIC_WRITE, 0, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
-			if(h!=INVALID_HANDLE_VALUE){
+			h = CreateFile(fn, GENERIC_WRITE, 0, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+			if (h != INVALID_HANDLE_VALUE) {
 				SetFilePointer(h, 0, 0, FILE_END);
 				WriteFile(h, M, fileSize, &w, 0);
 				CloseHandle(h);
@@ -835,40 +808,40 @@ DWORD WINAPI serverLoop(void *param)
 			delete[] M;
 		}
 		//save position
-		if(A){
-			lastMoveOld=lastMove;
-			movesOld=moves;
-			B=new Tsquare[m];
-			q=A;
-			p=B;
-			for(i=0; i<m; i++){
-				p->nxt=p-1;
-				p->pre=p+1;
-				p->x=*(unsigned char*)q;
-				p->y=*(unsigned char*)(q+1);
-				p->time= (len1>2) ? *(DWORD*)(q+2) : 0;
-				q+=len1;
+		if (A) {
+			lastMoveOld = lastMove;
+			movesOld = moves;
+			B = new Tsquare[m];
+			q = A;
+			p = B;
+			for (i = 0; i < m; i++) {
+				p->nxt = p - 1;
+				p->pre = p + 1;
+				p->x = *(unsigned char*)q;
+				p->y = *(unsigned char*)(q + 1);
+				p->time = (len1 > 2) ? *(DWORD*)(q + 2) : 0;
+				q += len1;
 				p++;
 			}
-			lastMove=p-1;
-			lastMove->pre= B->nxt= 0;
-			moves=m;
-			player=m&1;
-			for(i=0; i<2; i++){
-				id[i]= players[i].turPlayerId;
-				players[i].turPlayerId=client->player[i];
+			lastMove = p - 1;
+			lastMove->pre = B->nxt = 0;
+			moves = m;
+			player = m & 1;
+			for (i = 0; i < 2; i++) {
+				id[i] = players[i].turPlayerId;
+				players[i].turPlayerId = client->player[i];
 				turGetBrain(client->player[i], players[i].brain, sizeof(players[0].brain), false);
-				players[i].brain2[0]=0;
+				players[i].brain2[0] = 0;
 			}
 			// Tomas Kubes: I should save errCode in saveRec,
 			// but it is not probably available on the server,
 			// unless communication protocol is changed and I don't have any idea how to do it.
 			// so I put -1, it means unavailable
 			saveRec(-1, false);
-			players[0].turPlayerId=id[0];
-			players[1].turPlayerId=id[1];
-			lastMove=lastMoveOld;
-			moves=movesOld;
+			players[0].turPlayerId = id[0];
+			players[1].turPlayerId = id[1];
+			lastMove = lastMoveOld;
+			moves = movesOld;
 			delete[] B;
 			delete[] A;
 		}
@@ -882,17 +855,16 @@ DWORD WINAPI serverLoop(void *param)
 lend:
 	EnterCriticalSection(&netLock);
 	closesocket(client->socket);
-	client->socket=INVALID_SOCKET;
+	client->socket = INVALID_SOCKET;
 	CloseHandle(client->thread);
-	client->thread=0;
+	client->thread = 0;
 	wrLog(lng(857, "Client %d disconnected"), clientId);
 	LeaveCriticalSection(&netLock);
 	return 0;
 }
 //---------------------------------------------------------------
 //main function for a listening thread on server
-DWORD WINAPI listenLoop(void *)
-{
+DWORD WINAPI listenLoop(void *) {
 	SOCKET sock_c;
 	int i, sl;
 	char *a;
@@ -900,38 +872,37 @@ DWORD WINAPI listenLoop(void *)
 	struct sockaddr_in sa;
 
 	wrLog(lng(858, "Server started"));
-	for(;;){
-		sl= sizeof(sa);
-		if((sock_c= accept(sock_l, (sockaddr *)&sa, &sl))==INVALID_SOCKET){
+	for (;;) {
+		sl = sizeof(sa);
+		if ((sock_c = accept(sock_l, (sockaddr *)&sa, &sl)) == INVALID_SOCKET) {
 			break;
 		}
-		for(i=0;; i++){
-			if(i==Mplayer){
-				for(i=0; i<Mplayer; i++){
-					if(!clients[i].thread) break;
+		for (i = 0;; i++) {
+			if (i == Mplayer) {
+				for (i = 0; i < Mplayer; i++) {
+					if (!clients[i].thread) break;
 				}
 				break;
 			}
-			if(clients[i].IP==sa.sin_addr.S_un.S_addr && !clients[i].thread) break;
+			if (clients[i].IP == sa.sin_addr.S_un.S_addr && !clients[i].thread) break;
 		}
-		if(i==Mplayer){
+		if (i == Mplayer) {
 			wrLog("Too many clients");
 			closesocket(sock_c);
-		}
-		else{
-			c= &clients[i];
-			a= inet_ntoa(sa.sin_addr);
-			if(!a) a="???";
+		} else {
+			c = &clients[i];
+			a = inet_ntoa(sa.sin_addr);
+			if (!a) a = "???";
 			wrLog(lng(859, "Client %d connected: %s"), i, a);
-			c->IP= sa.sin_addr.S_un.S_addr;
-			c->socket=sock_c;
+			c->IP = sa.sin_addr.S_un.S_addr;
+			c->socket = sock_c;
 			DWORD id;
-			ResumeThread(c->thread=CreateThread(0, 0, serverLoop, (void*)i, CREATE_SUSPENDED, &id));
+			ResumeThread(c->thread = CreateThread(0, 0, serverLoop, (void*)i, CREATE_SUSPENDED, &id));
 		}
 	}
-	if(sock_l!=INVALID_SOCKET) serverEnd();
+	if (sock_l != INVALID_SOCKET) serverEnd();
 	WSACleanup();
-	isServer=false;
+	isServer = false;
 	drawTitle();
 	wrLog(lng(860, "Server terminated"));
 	return 0;
@@ -939,22 +910,20 @@ DWORD WINAPI listenLoop(void *)
 //---------------------------------------------------------------
 
 //send notification that a game finished on client
-void clientFinished()
-{
+void clientFinished() {
 	wr1(173);
 }
 
 //disconnect client
-void clientEnd()
-{
-	if(!isClient) return;
+void clientEnd() {
+	if (!isClient) return;
 	wr1(0);
-	for(int i=0; i<50; i++){
+	for (int i = 0; i < 50; i++) {
 		Sleep(200);
-		if(!isClient) return;
+		if (!isClient) return;
 	}
 	EnterCriticalSection(&netLock);
-	if(clientThread){
+	if (clientThread) {
 		wrLog("Server is not responding");
 		clientDone();
 		TerminateThread(clientThread, 1);
@@ -963,50 +932,46 @@ void clientEnd()
 }
 
 //disconnect client on server
-void killClient(int i)
-{
-	HANDLE t, t2=0;
+void killClient(int i) {
+	HANDLE t, t2 = 0;
 
-	if(i<0 || i>=Mplayer) return;
-	Tclient *c=&clients[i];
+	if (i < 0 || i >= Mplayer) return;
+	Tclient *c = &clients[i];
 	EnterCriticalSection(&netLock);
-	t= c->thread;
-	if(t) DuplicateHandle(GetCurrentProcess(), t, GetCurrentProcess(), &t2, 0, FALSE, DUPLICATE_SAME_ACCESS);
+	t = c->thread;
+	if (t) DuplicateHandle(GetCurrentProcess(), t, GetCurrentProcess(), &t2, 0, FALSE, DUPLICATE_SAME_ACCESS);
 	LeaveCriticalSection(&netLock);
-	if(t){
+	if (t) {
 		wr1(c->socket, 231);
 		closesocket(c->socket);
-		c->socket=INVALID_SOCKET;
+		c->socket = INVALID_SOCKET;
 		WaitForSingleObject(t2, 30000);
 		CloseHandle(t2);
 	}
 }
 
 //cancel tournament on server, don't stop listening
-void turAbort()
-{
+void turAbort() {
 	EnterCriticalSection(&netLock);
-	if(turNplayers) wrLog(lng(852, "Tournament aborted"));
-	turNplayers=0;
+	if (turNplayers) wrLog(lng(852, "Tournament aborted"));
+	turNplayers = 0;
 	win7TaskbarProgress.SetProgressState(hWin, TBPF_NOPROGRESS);
 	LeaveCriticalSection(&netLock);
-	for(int i=0; i<Mplayer; i++){
+	for (int i = 0; i < Mplayer; i++) {
 		killClient(i);
-		clients[i].player[0]=-1;
+		clients[i].player[0] = -1;
 	}
 }
 
-void stopListen()
-{
-	SOCKET s=sock_l;
-	sock_l=INVALID_SOCKET;
+void stopListen() {
+	SOCKET s = sock_l;
+	sock_l = INVALID_SOCKET;
 	closesocket(s);
 }
 
 //disconnect server
-void serverEnd()
-{
-	if(!isServer) return;
+void serverEnd() {
+	if (!isServer) return;
 	//terminatee clients threads
 	turAbort();
 	//close listening socket
@@ -1014,43 +979,37 @@ void serverEnd()
 }
 
 //---------------------------------------------------------------
-int initWSA()
-{
+int initWSA() {
 	WSAData wd;
-	int err= WSAStartup(0x0202, &wd);
-	if(err) msg("Cannot initialize WinSock");
+	int err = WSAStartup(0x0202, &wd);
+	if (err) msg("Cannot initialize WinSock");
 	return err;
 }
 
-int startListen()
-{
-	int err=1;
+int startListen() {
+	int err = 1;
 	struct sockaddr_in sa;
 	char host[128];
 
-	if(isServer || isNetGame || isListening){
-		err=4;
-	}
-	else if(!initWSA()){
-		if((sock_l= socket(PF_INET, SOCK_STREAM, 0))==INVALID_SOCKET){
+	if (isServer || isNetGame || isListening) {
+		err = 4;
+	} else if (!initWSA()) {
+		if ((sock_l = socket(PF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
 			msg("Error: socket");
-		}
-		else{
+		} else {
 			memset(&sa, 0, sizeof(sa));
 			sa.sin_family = AF_INET;
 			sa.sin_addr.s_addr = INADDR_ANY;
-			sa.sin_port=htons((u_short)port);
-			if(bind(sock_l, (sockaddr *)&sa, sizeof(sa)) != 0){
+			sa.sin_port = htons((u_short)port);
+			if (bind(sock_l, (sockaddr *)&sa, sizeof(sa)) != 0) {
 				msglng(861, "Cannot bind to port %d", port);
-				err=5;
-			}
-			else{
-				if(listen(sock_l, Mplayer)){
+				err = 5;
+			} else {
+				if (listen(sock_l, Mplayer)) {
 					msg("Error: listen");
-				}
-				else{
+				} else {
 					wrLog(0);
-					if(!gethostname(host, sizeof(host))){
+					if (!gethostname(host, sizeof(host))) {
 						wrLog(lng(862, "Hostname: %s"), host);
 					}
 					wrLog(lng(883, "Port: %d"), port);
@@ -1065,47 +1024,41 @@ int startListen()
 	return err;
 }
 
-int serverStart()
-{
-	if(startListen()) return 1;
-	isServer=true;
+int serverStart() {
+	if (startListen()) return 1;
+	isServer = true;
 	drawTitle();
 	DWORD id;
 	CloseHandle(CreateThread(0, 0, listenLoop, 0, 0, &id));
 	return 0;
 }
 
-int startConnection()
-{
-	int err=1;
+int startConnection() {
+	int err = 1;
 	unsigned long a;
 	sockaddr_in sa;
 	hostent *he;
 
-	if(!initWSA()){
+	if (!initWSA()) {
 		memset(&sa, 0, sizeof(sa));
 		sa.sin_family = AF_INET;
-		a= inet_addr(servername);
-		if(a!=INADDR_NONE){
-			sa.sin_addr.S_un.S_addr=a;
-		}
-		else if((he= gethostbyname(servername))!=0){
+		a = inet_addr(servername);
+		if (a != INADDR_NONE) {
+			sa.sin_addr.S_un.S_addr = a;
+		} else if ((he = gethostbyname(servername)) != 0) {
 			memcpy(&sa.sin_addr, he->h_addr, he->h_length);
-		}
-		else{
+		} else {
 			msglng(863, "Server not found");
-			err=2;
+			err = 2;
 			goto le;
 		}
-		if((sock= socket(PF_INET, SOCK_STREAM, 0))==INVALID_SOCKET){
+		if ((sock = socket(PF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
 			msg("Error: socket");
-		}
-		else{
+		} else {
 			sa.sin_port = htons((u_short)port);
-			if(connect(sock, (sockaddr*)&sa, sizeof(sa))!=0){
-				err=3;
-			}
-			else{
+			if (connect(sock, (sockaddr*)&sa, sizeof(sa)) != 0) {
+				err = 3;
+			} else {
 				return 0;
 			}
 			closesocket(sock);
@@ -1116,21 +1069,20 @@ int startConnection()
 	return err;
 }
 
-int clientStart()
-{
-	int err=startConnection();
-	if(err){
-		if(err==3) msglng(864, "Cannot connect to server");
+int clientStart() {
+	int err = startConnection();
+	if (err) {
+		if (err == 3) msglng(864, "Cannot connect to server");
 		return err;
 	}
-	isClient=true;
+	isClient = true;
 	drawTitle();
 	delete[] turTable;
-	turTable= new TturPlayer[turNplayers=2];
+	turTable = new TturPlayer[turNplayers = 2];
 	delete[] turCells;
-	turCells= new TturCell[4];
+	turCells = new TturCell[4];
 	DWORD id;
-	ResumeThread(clientThread=CreateThread(0, 0, clientLoop, 0, CREATE_SUSPENDED, &id));
+	ResumeThread(clientThread = CreateThread(0, 0, clientLoop, 0, CREATE_SUSPENDED, &id));
 	return 0;
 }
 

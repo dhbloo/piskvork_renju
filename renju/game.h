@@ -1,18 +1,18 @@
 /*
 	(C) 2012-2015  Tianyi Hao
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	*/
 // Version 4.0
 
@@ -31,21 +31,19 @@ class line4v;
 extern int S;
 extern int fflag;
 
-class game
-{
+class game {
 public:
 	int board[N][N];
 	int move;
 	game();
 };
 
-class line
-{
+class line {
 public:
-	int x[N+4];	
-	line(){}
+	int x[N + 4];
+	line() {}
 	line(int a[]);
-	line(game& b,int p,int d);
+	line(game& b, int p, int d);
 	int A6(int p);
 	int A5(int p);
 	int A4(int p);
@@ -55,24 +53,23 @@ public:
 	int A3pb(int p);
 };
 
-class line4v
-{
+class line4v {
 
 private:
 public:
-	int x1[N][N],x2[N][N],x3[2*N-1][N],x4[2*N-1][N];
+	int x1[N][N], x2[N][N], x3[2 * N - 1][N], x4[2 * N - 1][N];
 	line4v(game& board);
-	int A6(int x,int y);
-	int A5(int x,int y);
-	int A5test(int x,int y);
-	int A4(int x,int y);
-	int B4(int x,int y);
-	int B4p(int x,int y);
-	int overline(int x,int y);
-	int double4(int x,int y);
-	int A3r(int x,int y);
-	int double3r(int x,int y);
-	int foulr(int x,int y);
+	int A6(int x, int y);
+	int A5(int x, int y);
+	int A5test(int x, int y);
+	int A4(int x, int y);
+	int B4(int x, int y);
+	int B4p(int x, int y);
+	int overline(int x, int y);
+	int double4(int x, int y);
+	int A3r(int x, int y);
+	int double3r(int x, int y);
+	int foulr(int x, int y);
 	int B4p(int c);
 };
 
