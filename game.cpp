@@ -20,6 +20,8 @@
 #pragma hdrstop
 #include <ctype.h>
 #include "piskvork.h"
+#include <sstream>
+#include <vector>
 
 const int mutexPsqTimeoutMiliseconds = 50;
 const int mutexTableTimeoutMiliseconds = 500;
@@ -438,9 +440,11 @@ int __cdecl turCmpRatio(const void *a, const void *b) {
 	return getCell(*(int*)a, *(int*)b)->sum() - getCell(*(int*)b, *(int*)a)->sum();
 }
 
-int __cdecl turCmpPoints(const void *a, const void *b) {
+int __cdecl turCmpElo(const void *a, const void *b) {
 	TturPlayer *p1 = &turTable[*(int*)a], *p2 = &turTable[*(int*)b];
-	int i = p2->points - p1->points;
+	int i = p2->elo - p1->elo;
+	if (i != 0) return i;
+	i = p2->points - p1->points;
 	if (i != 0) return i;
 	i = turCmpRatio(a, b);
 	if (i != 0) return i;
@@ -456,6 +460,160 @@ void removeChar(char *dest, char *src, char ch) {
 	} while (c);
 }
 
+void split(const std::string &s, char delim, std::vector<std::string> &elems) {
+	std::stringstream ss(s);
+	std::string item;
+	while (std::getline(ss, item, delim)) {
+		if (item.length() > 0)
+			elems.push_back(item);
+	}
+}
+
+
+std::vector<std::string> split(const std::string &s, char delim) {
+	std::vector<std::string> elems;
+	split(s, delim, elems);
+	return elems;
+}
+
+bool writeTempResultPgn(char * fn, int & matchesWritten) {
+	FILE *f;
+	int i, j, s1, s2, s3, s;
+
+	f = fopen(fn, "wt");
+	if (f) {
+		for (i = 0; i < turNplayers; i++) {
+			for (j = i + 1; j < turNplayers; j++) {
+				s1 = getCell(i, j)->sum();
+				s2 = getCell(j, i)->sum();
+				s3 = getCell(i, j)->draw + getCell(j, i)->draw;
+				for (s = 0; s < s1; s++) {
+					fprintf(f, "[Black \"%d\"]\n[White \"%d\"]\n[Result \"1-0\"]\n\n1. a1 a2 1-0\n\n", i, j);
+					matchesWritten++;
+				}
+				for (s = 0; s < s2; s++) {
+					fprintf(f, "[Black \"%d\"]\n[White \"%d\"]\n[Result \"0-1\"]\n\n1. a1 a2 0-1\n\n", i, j);
+					matchesWritten++;
+				}
+				for (s = 0; s < s3; s++) {
+					fprintf(f, "[Black \"%d\"]\n[White \"%d\"]\n[Result \"1/2-1/2\"]\n\n1. a1 a2 1/2-1/2\n\n", i, j);
+					matchesWritten++;
+				}
+			}
+		}
+		fclose(f);
+		return true;
+	}
+	return false;
+}
+
+bool calcBayesElo() {
+	TfileName pgnFileName;
+	HANDLE g_hChildStd_IN_Rd = NULL;
+	HANDLE g_hChildStd_IN_Wr = NULL;
+	HANDLE g_hChildStd_OUT_Rd = NULL;
+	HANDLE g_hChildStd_OUT_Wr = NULL;
+	DWORD dwRead, dwWritten, bytesAvail = 0;
+	char buf[65536];
+
+	SECURITY_ATTRIBUTES saAttr;
+	// Set the bInheritHandle flag so pipe handles are inherited. 
+	saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+	saAttr.bInheritHandle = TRUE;
+	saAttr.lpSecurityDescriptor = NULL;
+	// Create a pipe for the child process's STDOUT. 
+	if (!CreatePipe(&g_hChildStd_OUT_Rd, &g_hChildStd_OUT_Wr, &saAttr, 0))
+		return false;
+	// Ensure the read handle to the pipe for STDOUT is not inherited.
+	if (!SetHandleInformation(g_hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0))
+		return false;
+	// Create a pipe for the child process's STDIN. 
+	if (!CreatePipe(&g_hChildStd_IN_Rd, &g_hChildStd_IN_Wr, &saAttr, 0))
+		return false;
+	// Ensure the write handle to the pipe for STDIN is not inherited. 
+	if (!SetHandleInformation(g_hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0))
+		return false;
+
+	memcpy(pgnFileName, tempDir, 256);
+	strcat(pgnFileName, "_tempResult.pgn");
+
+	int matchesWritten = 0;
+	if (!writeTempResultPgn(pgnFileName, matchesWritten))
+		return false;
+	if (!matchesWritten)
+		return true;
+
+	// Create the child process. 
+	PROCESS_INFORMATION piProcInfo;
+	STARTUPINFO siStartInfo;
+	BOOL bSuccess = FALSE;
+
+	// Set up members of the PROCESS_INFORMATION structure. 
+	ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
+
+	// Set up members of the STARTUPINFO structure. 
+	// This structure specifies the STDIN and STDOUT handles for redirection.
+	ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
+	siStartInfo.cb = sizeof(STARTUPINFO);
+	siStartInfo.hStdError = g_hChildStd_OUT_Wr;
+	siStartInfo.hStdOutput = g_hChildStd_OUT_Wr;
+	siStartInfo.hStdInput = g_hChildStd_IN_Rd;
+	siStartInfo.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+	siStartInfo.wShowWindow = SW_HIDE;
+
+	if (!CreateProcess(0, "bayeselo", 0, 0, TRUE, NORMAL_PRIORITY_CLASS, 0, tempDir, &siStartInfo, &piProcInfo)) {
+		DeleteFile(pgnFileName);
+		return false;
+	}
+
+	sprintf(buf, "readpgn %s\n", pgnFileName);
+	WriteFile(g_hChildStd_IN_Wr, buf, strlen(buf), &dwWritten, NULL);
+	FlushFileBuffers(g_hChildStd_IN_Wr);
+	WriteFile(g_hChildStd_IN_Wr, "elo\n", 4, &dwWritten, NULL);
+	WriteFile(g_hChildStd_IN_Wr, "offset 1600\n", 12, &dwWritten, NULL);
+	WriteFile(g_hChildStd_IN_Wr, "advantage 0\n", 12, &dwWritten, NULL);
+	WriteFile(g_hChildStd_IN_Wr, "mm\n", 3, &dwWritten, NULL);
+	FlushFileBuffers(g_hChildStd_IN_Wr);
+
+	Sleep(10);
+	ReadFile(g_hChildStd_OUT_Rd, buf, 65536, &dwRead, NULL);
+
+	WriteFile(g_hChildStd_IN_Wr, "ratings\n", 8, &dwWritten, NULL);
+	FlushFileBuffers(g_hChildStd_IN_Wr);
+	memset(buf, 0, dwRead);
+	while (!bytesAvail) {
+		Sleep(10);
+		PeekNamedPipe(g_hChildStd_OUT_Rd, NULL, 0, NULL, &bytesAvail, NULL);
+	}
+	ReadFile(g_hChildStd_OUT_Rd, buf, 65536, &dwRead, NULL);
+	WriteFile(g_hChildStd_IN_Wr, "x\nx\n", 4, &dwWritten, NULL);
+	FlushFileBuffers(g_hChildStd_IN_Wr);
+
+	CloseHandle(g_hChildStd_OUT_Rd);
+	CloseHandle(g_hChildStd_IN_Wr);
+	TerminateProcess(piProcInfo.hProcess, 0);
+	CloseHandle(piProcInfo.hProcess);
+	CloseHandle(piProcInfo.hThread);
+
+	DeleteFile(pgnFileName);
+	
+	//read bayes elo ratings
+	std::string bufStr(buf);
+	int eloReaded = 0;
+	auto lines = split(bufStr, '\n');
+	for (size_t i = 1; i < lines.size(); i++) {
+		auto elem = split(lines[i], ' ');
+		if (elem.size() >= 3) {
+			int index = atoi(elem[1].c_str());
+			if (index >= 0 && index < turNplayers) {
+				turTable[index].elo = atoi(elem[2].c_str());
+				eloReaded++;
+			}
+		}
+	}
+	return eloReaded > 0;
+}
+
 void turResultInner(TfileName& fn) {
 	char *result, *s, *s0;
 	int i, j, s1, s2, e, m;
@@ -468,6 +626,7 @@ void turResultInner(TfileName& fn) {
 	char ruleBuffer[128];
 	const float k = 1e-8f;
 	SYSTEMTIME date;
+	bool eloOK;
 
 	//calculate points and ratio
 	for (i = 0; i < turNplayers; i++) {
@@ -476,87 +635,94 @@ void turResultInner(TfileName& fn) {
 		s2 = t->losses + t->timeouts + t->errors;
 		t->ratio = (s1 + k) / (s2 + k);
 		t->points = 0;
+		t->elo = 1600;
 		for (j = 0; j < turNplayers; j++) {
 			s1 = getCell(j, i)->sum();
 			s2 = getCell(i, j)->sum();
 			if (s1 >= s2 && s1 + s2 > 1) t->points += (s1 > s2) ? WIN_POINT : TIE_POINT;
 		}
 	}
+
+	eloOK = calcBayesElo();
+
 	//sort results
 	A = new int[turNplayers];
 	for (i = 0; i < turNplayers; i++) A[i] = i;
-	qsort(A, turNplayers, sizeof(int), turRule != 1 &&
-		turCurRepeat < turRepeat ? turCmpPoints : turCmpRatio);
+	qsort(A, turNplayers, sizeof(int), turCmpElo);
 
 	//HTML table  
 	f = fopen(fn, "wt");
 	if (f) {
-		fprintf(f, "<HTML><HEAD><TITLE>Piskvork tournament result</TITLE><LINK href=\"piskvork.css\" type=text/css rel=stylesheet></HEAD><BODY><TABLE border=1><TBODY align=center>\n");
+		fprintf(f, "<style type=\"text/css\">table.result{border-collapse:collapse;}table.result th a{ display: block;}table.result .win{background-color: #99D9EA;}table.result .loss{background-color: #FFF200;}table.result .draw{background-color: #B5E61D;}table.result .dash{background-color: #E0E0E0;}table.result td{background-color: #E0E0E0;white-space: nowrap;border: 2px solid #777;}table.result th{background-color: #C0C0C0;white-space: nowrap;border: 2px solid #777;}table.result td, th{}table.result num{color: #000000;font-weight: 600;}table.result name{color: #007f00;font-weight: 700;}</style>");
+		fprintf(f, "<HTML><HEAD><TITLE>Piskvork tournament result</TITLE><LINK href=\"piskvork.css\" type=text/css rel=stylesheet></HEAD><BODY><TABLE border=1 class=\"result\"><TBODY align=center>\n");
 		for (i = -1; i < turNplayers; i++) {
 			fputs("<TR>", f);
-			for (j = -1; j < turNplayers; j++) {
+			for (j = -5; j < turNplayers; j++) {
 				if (turRule == 1 && j >= 0 && A[j]) continue;
-				if (i == j) {
+				if (i == j && i >= 0) {
 					fputs("<TD class=\"dash\">-</TD>", f);
 				} else if (i < 0 || j < 0) {
-					fputs("<TH>", f);
-					turGetBrain(i >= 0 ? A[i] : A[j], buf, sizeof(buf), true);
-					fputs(buf, f);
-					fputs("</TH>", f);
-				} else {
-					c1 = getCell(A[i], A[j]);
-					c2 = getCell(A[j], A[i]);
-					fprintf(f, "<TD class=\"");
-					if (c1->sum() > c2->sum()) {
-						fprintf(f, "win");
-					} else if (c1->sum() < c2->sum()) {
-						fprintf(f, "loss");
+					if (i < 0) {
+						switch (j) {
+						case -5: fputs("<TH>#</TH>", f); break;
+						case -4: fprintf(f, "<TH>%s</TH>", lng(616, "Name")); break;
+						case -3: fprintf(f, "<TH>%s</TH>", eloOK ? lng(615, "Elo") : lng(609, "Points")); break;
+						case -2: if (turRule != 1) fprintf(f, "<TH>%s</TH>", lng(608, "Ratio")); break;
+						case -1: if (turRule != 1) fprintf(f, "<TH>%s</TH>", lng(607, "Total")); break;
+						default: 
+							fprintf(f, turRule == 1 ? "<TH><NAME>" : "<TH><NUM>%d</NUM><BR/><NAME>", j + 1);
+							turGetBrain(A[j], buf, sizeof(buf), true);
+							fputs(buf, f);
+							fputs("</NAME></TH>", f);
+							break;
+						}
 					} else {
-						fprintf(f, "draw");
+						t = &turTable[A[i]];
+						switch (j) {
+						case -5: fprintf(f, "<TH><NUM>%d</NUM></TH>", i + 1); break;
+						case -4: 
+							fputs("<TH><NAME>", f);
+							turGetBrain(A[i], buf, sizeof(buf), true);
+							fputs(buf, f);
+							fputs("</NAME></TH>", f);
+							break;
+						case -3: 
+							if (eloOK) {
+								if (t->Ngames && (float)t->errors / t->Ngames < 0.3f) fprintf(f, "<TD>%d</TD>", t->elo);
+								else fputs("<TD>-</TD>", f);
+							} else
+								fprintf(f, "<TD>%d</TD>", t->points);
+							 break;
+						case -2: if (turRule != 1) t->ratio < 1E6f ? fprintf(f, "<TD>%.3f</TD>", t->ratio) : fputs("<TD>-</TD>", f); break;
+						case -1: if (turRule != 1) fprintf(f, "<TD>%d : %d</TD>", t->wins + t->winsE, t->losses + t->timeouts + t->errors); break;
+						}
 					}
+				} else {
+					c1 = getCell(A[j], A[i]);
+					c2 = getCell(A[i], A[j]);
+					fprintf(f, "<TD class=\"");
+					if (c1->sum() > c2->sum())
+						fprintf(f, "win");
+					else if (c1->sum() < c2->sum())
+						fprintf(f, "loss");
+					else
+						fprintf(f, "draw");
 					fprintf(f, "\">%d : %d", c1->sum(), c2->sum());
-					/*
-					fprintf("<BR>%d+%d", c1->start,c1->notStart);
-					if(c1->error) fprintf(f,"+%d",c1->error);
-					fprintf(f,":%d+%d", c2->start, c2->notStart);
-					if(c2->error) fprintf(f,"+%d",c2->error);
-					*/
 					fputs("</TD>", f);
 				}
 			}
 			fputs("</TR>\n", f);
 		}
-		fprintf(f, "<TR><TH>%s</TH>", lng(607, "Total"));
-		for (j = 0; j < turNplayers; j++) {
-			if (turRule == 1 && A[j]) continue;
-			t = &turTable[A[j]];
-			s1 = t->wins + t->winsE;
-			s2 = t->losses + t->timeouts + t->errors;
+		if (turRule == 1) {
+			t = &turTable[0];
+			fprintf(f, "<TH></TH><TH>%s</TH><TD></TD>", lng(608, "Ratio"));
+			if (t->ratio < 1E6f)
+				fprintf(f, "<TD>%.3f</TD>", t->ratio);
+			else
+				fputs("<TD>-</TD>", f);
 
-			fprintf(f, "<TD class=\"");
-			if (s1 > s2) {
-				fprintf(f, "win");
-			} else if (s1 < s2) {
-				fprintf(f, "loss");
-			} else {
-				fprintf(f, "draw");
-			}
-			fprintf(f, "\">%d : %d</TD>", s1, s2);
-		}
-		fprintf(f, "</TR>\n<TR><TH>%s</TH>", lng(608, "Ratio"));
-		for (j = 0; j < turNplayers; j++) {
-			if (turRule == 1 && A[j]) continue;
-			fputs("<TD>", f);
-			float r = turTable[A[j]].ratio;
-			if (r < 1E6f) fprintf(f, "%.3f", r);
-			else fputc('-', f);
-			fputs("</TD>", f);
-		}
-		if (turRule != 1) {
-			fprintf(f, "</TR>\n<TR><TH>%s</TH>", lng(609, "Points"));
-			for (j = 0; j < turNplayers; j++) {
-				fprintf(f, "<TD>%d</TD>", turTable[A[j]].points);
-			}
+			fprintf(f, "</TR>\n<TH></TH><TH>%s</TH><TD></TD>", lng(607, "Total"));
+			fprintf(f, "<TD>%d : %d</TD>", t->wins + t->winsE, t->losses + t->timeouts + t->errors);
 		}
 		fputs("</TR>\n</TBODY></TABLE>", f);
 	}
@@ -615,6 +781,7 @@ void turResultInner(TfileName& fn) {
 			t->losses + e, t->losses1, t->losses - t->losses1);
 		if (e) s += sprintf(s, "+%d", e);
 		if (t->errors) s += sprintf(s, lng(603, ",  %d errors"), t->errors);
+		if (t->Ngames) s += sprintf(s, lng(614, ",  ELO: %d"), t->elo);
 		if (t->Nmoves) {
 			int m = t->time / t->Nmoves;
 			s += sprintf(s, lng(604, "\r\ntime/turn: %d %s (max: %.1f s),  time/game: %d s\r\nmoves/game: %d,  CRC: %x"),
@@ -1237,6 +1404,11 @@ bool doMove1(Psquare p, int action) {
 				//log
 				if (!continuous || turNplayers) wrLog(lng(651, "\r\nIt's a draw!\r\n")); else wrLog("");
 				wrGameResult();
+
+				i1 = players[1 - player].turPlayerId;
+				i2 = players[player].turPlayerId;
+				c = getCell(i1, i2);
+				c->draw++;
 			}
 			finishGame(0); //standard finish
 		}

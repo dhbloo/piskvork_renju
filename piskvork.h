@@ -122,12 +122,12 @@ struct TturPlayer {
 	int time, memory, maxTurnTime;
 	int Nmoves, Ngames;
 	DWORD crc;
-	int points;
+	int points, elo;
 	float ratio;
 };
 
 struct TturCell {
-	short start, notStart, error;
+	short start, notStart, error, draw;
 	int sum() { return start + notStart + error; }
 };
 

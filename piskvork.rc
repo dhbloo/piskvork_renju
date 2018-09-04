@@ -28,6 +28,7 @@ LANGUAGE LANG_CZECH, SUBLANG_DEFAULT
 // remains consistent on all systems.
 1                       ICON                    "piskvork.ico"
 
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // Menu
@@ -170,7 +171,7 @@ BEGIN
     CONTROL         "five or mo&re stones win",555,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,11,61,137,10
     CONTROL         "e&xactly five stones win",556,"Button",BS_AUTORADIOBUTTON,11,71,137,10
     CONTROL         "renju rule",557,"Button",BS_AUTORADIOBUTTON,11,81,137,10
-	GROUPBOX        "",IDC_STATIC,4,94,148,34
+    GROUPBOX        "",IDC_STATIC,4,94,148,34
     CONTROL         "singl&e game",559,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,11,100,137,10
     CONTROL         "&continuous game",560,"Button",BS_AUTORADIOBUTTON,11,112,137,10
     GROUPBOX        "",IDC_STATIC,4,127,148,136,WS_GROUP
@@ -278,7 +279,7 @@ BEGIN
     EDITTEXT        106,13,187,159,14,ES_AUTOHSCROLL
     PUSHBUTTON      "...",107,176,187,16,14
     CONTROL         "&Gomotur format (*.rec)",572,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,205,92,10
-    CONTROL         "Onl&y losses",573,"Button",BS_AUTOCHECKBOX | BS_LEFT | WS_TABSTOP,114,205,78,10
+    CONTROL         "Onl&y losses",573,"Button",BS_AUTOCHECKBOX | BS_LEFT | WS_TABSTOP,108,205,78,10
     RTEXT           "&Repeat count:",561,201,7,71,8
     EDITTEXT        102,279,4,29,14,ES_NUMBER
     RTEXT           "Games cou&nt:",562,201,24,71,8
@@ -413,7 +414,9 @@ END
 //
 
 10                      BITMAP                  ".\\skins\\pisq.bmp"
+
 11                      BITMAP                  "toolbar.bmp"
+
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -447,7 +450,7 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,3,0,0
+ FILEVERSION 1,4,0,0
  PRODUCTVERSION 0,0,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
@@ -463,18 +466,11 @@ BEGIN
     BEGIN
         BLOCK "040504b0"
         BEGIN
-            VALUE "Comments", "\0"
-            VALUE "CompanyName", " \0"
-            VALUE "FileDescription", "Pi歬vorky\0"
-            VALUE "FileVersion", "1, 3, 0, 0\0"
-            VALUE "InternalName", "\0"
-            VALUE "LegalCopyright", "?2000 - 2015  Petr La歵ovi鑛a, 2012 - 2016  Tianyi Hao\0"
-            VALUE "LegalTrademarks", "\0"
-            VALUE "OriginalFilename", "piskvork.exe\0"
-            VALUE "PrivateBuild", "\0"
-            VALUE "ProductName", "\0"
-            VALUE "ProductVersion", "\0"
-            VALUE "SpecialBuild", "\0"
+            VALUE "CompanyName", " "
+            VALUE "FileDescription", "Pi歬vorky"
+            VALUE "FileVersion", "1.4.0.0"
+            VALUE "LegalCopyright", "2000 - 2015  Petr La歵ovi鑛a, 2012 - 2017  Tianyi Hao"
+            VALUE "OriginalFilename", "piskvork.exe"
         END
     END
     BLOCK "VarFileInfo"
@@ -568,8 +564,28 @@ BEGIN
         TOPMARGIN, 7
         BOTTOMMARGIN, 78
     END
+
+    "KEYS", DIALOG
+    BEGIN
+    END
 END
 #endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+OPTIONS AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+TOURNAMENT AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
 
 #endif    // 捷克语(捷克共和国) resources
 /////////////////////////////////////////////////////////////////////////////
