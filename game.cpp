@@ -700,6 +700,7 @@ void turResultInner(TfileName& fn) {
 				} else {
 					c1 = getCell(A[j], A[i]);
 					c2 = getCell(A[i], A[j]);
+					if (turRule == 1) std::swap(c1, c2);
 					fprintf(f, "<TD class=\"");
 					if (c1->sum() > c2->sum())
 						fprintf(f, "win");
@@ -715,14 +716,15 @@ void turResultInner(TfileName& fn) {
 		}
 		if (turRule == 1) {
 			t = &turTable[0];
-			fprintf(f, "<TH></TH><TH>%s</TH><TD></TD>", lng(608, "Ratio"));
+
+			fprintf(f, "<TH></TH><TH>%s</TH><TD></TD>", lng(607, "Total"));
+			fprintf(f, "<TD>%d : %d</TD>", t->wins + t->winsE, t->losses + t->timeouts + t->errors);
+
+			fprintf(f, "</TR>\n<TH></TH><TH>%s</TH><TD></TD>", lng(608, "Ratio"));
 			if (t->ratio < 1E6f)
 				fprintf(f, "<TD>%.3f</TD>", t->ratio);
 			else
 				fputs("<TD>-</TD>", f);
-
-			fprintf(f, "</TR>\n<TH></TH><TH>%s</TH><TD></TD>", lng(607, "Total"));
-			fprintf(f, "<TD>%d : %d</TD>", t->wins + t->winsE, t->losses + t->timeouts + t->errors);
 		}
 		fputs("</TR>\n</TBODY></TABLE>", f);
 	}
