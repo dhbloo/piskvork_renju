@@ -1205,7 +1205,7 @@ void wrMsgNewGame(int p1, int p2) {
 
 void newGame(int pl, bool openingEnabled, bool forceAutoBegin) {
 	int j, x, y, x0, y0, w, r;
-	signed char *o;
+	volatile signed char *o; //"volatile" solves strange vc compiler bug
 
 	if (!isClient) {
 		wrMsgNewGame(players[pl].turPlayerId, players[1 - pl].turPlayerId);
