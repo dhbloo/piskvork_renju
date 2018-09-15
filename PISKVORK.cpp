@@ -898,6 +898,12 @@ void repaint(RECT *clip) {
 	int i, d, j;
 	char buf[4];
 
+	HFONT font = CreateFont(17, 7, 0, 0, FW_BOLD, false, false, false,
+		DEFAULT_CHARSET, OUT_CHARACTER_PRECIS,
+		CLIP_CHARACTER_PRECIS, DEFAULT_QUALITY,
+		FF_DONTCARE, "Arial");
+	SelectObject(dc, font);
+
 	brush = CreateSolidBrush(colors[0]);
 	if (coordVisible) {
 		//left
