@@ -575,14 +575,14 @@ bool calcBayesElo() {
 	WriteFile(g_hChildStd_IN_Wr, "mm\n", 3, &dwWritten, NULL);
 	FlushFileBuffers(g_hChildStd_IN_Wr);
 
-	Sleep(10);
+	Sleep(12);
 	ReadFile(g_hChildStd_OUT_Rd, buf, 65536, &dwRead, NULL);
 
 	WriteFile(g_hChildStd_IN_Wr, "ratings\n", 8, &dwWritten, NULL);
 	FlushFileBuffers(g_hChildStd_IN_Wr);
 	memset(buf, 0, dwRead);
 	while (!bytesAvail) {
-		Sleep(10);
+		Sleep(20);
 		PeekNamedPipe(g_hChildStd_OUT_Rd, NULL, 0, NULL, &bytesAvail, NULL);
 	}
 	ReadFile(g_hChildStd_OUT_Rd, buf, 65536, &dwRead, NULL);
@@ -783,7 +783,7 @@ void turResultInner(TfileName& fn) {
 			t->losses + e, t->losses1, t->losses - t->losses1);
 		if (e) s += sprintf(s, "+%d", e);
 		if (t->errors) s += sprintf(s, lng(603, ",  %d errors"), t->errors);
-		if (t->Ngames) s += sprintf(s, lng(614, ",  ELO: %d"), t->elo);
+		if (eloOK && t->Ngames) s += sprintf(s, lng(614, ",  ELO: %d"), t->elo);
 		if (t->Nmoves) {
 			int m = t->time / t->Nmoves;
 			s += sprintf(s, lng(604, "\r\ntime/turn: %d %s (max: %.1f s),  time/game: %d s\r\nmoves/game: %d,  CRC: %x"),
