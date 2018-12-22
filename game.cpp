@@ -1372,7 +1372,7 @@ bool doMove1(Psquare p, int action) {
 				wrGameResult();
 			}
 			//draw a line
-			if (!f) {
+			if (!f || ruleFive != 2) {
 				for (;; prvP(p2, 1)) {
 					p2->winLineDir = s;
 					p2->winLineStart = p1;
