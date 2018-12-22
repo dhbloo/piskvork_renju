@@ -442,7 +442,8 @@ int __cdecl turCmpRatio(const void *a, const void *b) {
 
 int __cdecl turCmpElo(const void *a, const void *b) {
 	TturPlayer *p1 = &turTable[*(int*)a], *p2 = &turTable[*(int*)b];
-	int i = p2->elo - p1->elo;
+
+	int i = (p2->elo == INT_MIN ? 1600 : p2->elo) - (p1->elo == INT_MIN ? 1600 : p1->elo);
 	if (i != 0) return i;
 	i = p2->points - p1->points;
 	if (i != 0) return i;
@@ -485,33 +486,36 @@ bool writeResultPgn(char * fn, int & matchesWritten) {
 	if (f) {
 		for (i = 0; i < turNplayers; i++) {
 			for (j = i + 1; j < turNplayers; j++) {
-				TturCell * c1 = getCell(i, j);
-				TturCell * c2 = getCell(j, i);
+				TturCell * c1 = getCell(j, i);
+				TturCell * c2 = getCell(i, j);
 				draw = c1->draw + c2->draw;
+
+				if (c1->sum())
+
 				turGetBrain(i, name_i, sizeof(name_i), true);
 				turGetBrain(j, name_j, sizeof(name_j), true);
 
 				for (s = 0; s < c1->start; s++)
-					fprintf(f, "[Black \"%s\"]\n[White \"%s\"]\n[Result \"1-0\"]\n\n1. a1 1-0\n\n", name_i, name_j);
+					fprintf(f, "[Black \"%s\"]\n[White \"%s\"]\n[Result \"0-1\"]\n\n1. a1 0-1\n\n", name_i, name_j);
 
 				for (s = 0; s < c1->notStart; s++)
 					fprintf(f, "[White \"%s\"]\n[Black \"%s\"]\n[Result \"1-0\"]\n\n1. a1 1-0\n\n", name_i, name_j);
 				
 				for (s = 0; s < c1->error; s++)
 					if (s & 1)
-						fprintf(f, "[Black \"%s\"]\n[White \"%s\"]\n[Result \"1-0\"]\n\n1. a1 1-0\n\n", name_i, name_j);
+						fprintf(f, "[Black \"%s\"]\n[White \"%s\"]\n[Result \"0-1\"]\n\n1. a1 0-1\n\n", name_i, name_j);
 					else
 						fprintf(f, "[White \"%s\"]\n[Black \"%s\"]\n[Result \"1-0\"]\n\n1. a1 1-0\n\n", name_i, name_j);
 
 				for (s = 0; s < c2->start; s++)
-					fprintf(f, "[Black \"%s\"]\n[White \"%s\"]\n[Result \"1-0\"]\n\n1. a1 1-0\n\n", name_j, name_i);
+					fprintf(f, "[Black \"%s\"]\n[White \"%s\"]\n[Result \"0-1\"]\n\n1. a1 0-1\n\n", name_j, name_i);
 
 				for (s = 0; s < c2->notStart; s++)
-					fprintf(f, "[Black \"%s\"]\n[White \"%s\"]\n[Result \"1-0\"]\n\n1. a1 1-0\n\n", name_j, name_i);
+					fprintf(f, "[White \"%s\"]\n[Black \"%s\"]\n[Result \"1-0\"]\n\n1. a1 1-0\n\n", name_j, name_i);
 
 				for (s = 0; s < c2->error; s++)
 					if (s & 1)
-						fprintf(f, "[Black \"%s\"]\n[White \"%s\"]\n[Result \"1-0\"]\n\n1. a1 1-0\n\n", name_j, name_i);
+						fprintf(f, "[Black \"%s\"]\n[White \"%s\"]\n[Result \"0-1\"]\n\n1. a1 0-1\n\n", name_j, name_i);
 					else
 						fprintf(f, "[White \"%s\"]\n[Black \"%s\"]\n[Result \"1-0\"]\n\n1. a1 1-0\n\n", name_j, name_i);
 
@@ -564,7 +568,7 @@ bool calcBayesElo() {
 	int matchesWritten = 0;
 	if (!writeResultPgn(pgnFileName, matchesWritten))
 		return false;
-	if (!matchesWritten)
+	if (!matchesWritten && !turUsePGN)
 		return true;
 
 	// Create the child process. 
@@ -590,6 +594,17 @@ bool calcBayesElo() {
 		return false;
 	}
 
+	if (turUsePGN) {
+		char pgnName[1000], *pgnStr = pgnFilenameStr;
+		int count;
+		while (sscanf(pgnStr, "%s\n%n", pgnName, &count) != EOF) {
+			pgnStr += count;
+			sprintf(buf, "readpgn %s\n", pgnName);
+			WriteFile(g_hChildStd_IN_Wr, buf, strlen(buf), &dwWritten, NULL);
+		}
+		FlushFileBuffers(g_hChildStd_IN_Wr);
+	}
+
 	sprintf(buf, "readpgn %s\n", pgnFileName);
 	WriteFile(g_hChildStd_IN_Wr, buf, strlen(buf), &dwWritten, NULL);
 	FlushFileBuffers(g_hChildStd_IN_Wr);
@@ -599,14 +614,14 @@ bool calcBayesElo() {
 	WriteFile(g_hChildStd_IN_Wr, "mm\n", 3, &dwWritten, NULL);
 	FlushFileBuffers(g_hChildStd_IN_Wr);
 
-	Sleep(15);
+	Sleep(20);
 	ReadFile(g_hChildStd_OUT_Rd, buf, 65536, &dwRead, NULL);
 
 	WriteFile(g_hChildStd_IN_Wr, "ratings\n", 8, &dwWritten, NULL);
 	FlushFileBuffers(g_hChildStd_IN_Wr);
 	memset(buf, 0, dwRead);
 	while (!bytesAvail) {
-		Sleep(30);
+		Sleep(40);
 		PeekNamedPipe(g_hChildStd_OUT_Rd, NULL, 0, NULL, &bytesAvail, NULL);
 	}
 	ReadFile(g_hChildStd_OUT_Rd, buf, 65536, &dwRead, NULL);
@@ -662,7 +677,7 @@ void turResultInner(TfileName& fn) {
 		s2 = t->losses + t->timeouts + t->errors;
 		t->ratio = (s1 + k) / (s2 + k);
 		t->points = 0;
-		t->elo = 1600;
+		t->elo = INT_MIN;
 		for (j = 0; j < turNplayers; j++) {
 			s1 = getCell(j, i)->sum();
 			s2 = getCell(i, j)->sum();
@@ -715,8 +730,10 @@ void turResultInner(TfileName& fn) {
 							break;
 						case -3: 
 							if (eloOK) {
-								if (t->Ngames && (float)t->errors / t->Ngames < 0.3f) fprintf(f, "<TD>%d</TD>", t->elo);
-								else fputs("<TD>-</TD>", f);
+								if ((t->Ngames || turUsePGN) && t->elo != INT_MIN && (t->Ngames == 0 || (float)t->errors / t->Ngames < 0.3f))
+									fprintf(f, "<TD>%d</TD>", t->elo);
+								else 
+									fputs("<TD>-</TD>", f);
 							} else
 								fprintf(f, "<TD>%d</TD>", t->points);
 							 break;
@@ -810,7 +827,8 @@ void turResultInner(TfileName& fn) {
 			t->losses + e, t->losses1, t->losses - t->losses1);
 		if (e) s += sprintf(s, "+%d", e);
 		if (t->errors) s += sprintf(s, lng(603, ",  %d errors"), t->errors);
-		if (eloOK && t->Ngames) s += sprintf(s, lng(614, ",  ELO: %d"), t->elo);
+		if (eloOK && (t->Ngames || turUsePGN) && t->elo != INT_MIN) 
+			s += sprintf(s, lng(614, ",  ELO: %d"), t->elo);
 		if (t->Nmoves) {
 			int m = t->time / t->Nmoves;
 			s += sprintf(s, lng(604, "\r\ntime/turn: %d %s (max: %.1f s),  time/game: %d s\r\nmoves/game: %d,  CRC: %x"),

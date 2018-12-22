@@ -263,24 +263,24 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,118,197,50,14
 END
 
-TOURNAMENT DIALOGEX 0, 0, 345, 313
+TOURNAMENT DIALOGEX 0, 0, 346, 323
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Tournament"
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,10,290,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,75,290,50,14
-    PUSHBUTTON      "Continue",569,148,290,50,14
+    DEFPUSHBUTTON   "OK",IDOK,10,302,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,75,302,50,14
+    PUSHBUTTON      "Continue",569,147,302,50,14
     LTEXT           "Players  (EXE or &ZIP files):",563,15,8,95,8
-    EDITTEXT        101,7,22,190,139,ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_WANTRETURN | WS_VSCROLL
-    PUSHBUTTON      "A&dd",564,121,4,50,14
-    GROUPBOX        "",IDC_STATIC,7,162,190,58
-    CONTROL         "Save &boards",565,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,172,86,10
-    CONTROL         "&Save messages",567,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,108,172,84,10
-    EDITTEXT        106,13,187,159,14,ES_AUTOHSCROLL
-    PUSHBUTTON      "...",107,176,187,16,14
-    CONTROL         "&Gomotur format (*.rec)",572,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,205,92,10
-    CONTROL         "Onl&y losses",573,"Button",BS_AUTOCHECKBOX | BS_LEFT | WS_TABSTOP,108,205,78,10
+    EDITTEXT        101,7,22,190,101,ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_WANTRETURN | WS_VSCROLL
+    PUSHBUTTON      "A&dd",583,141,193,50,14
+    GROUPBOX        "",IDC_STATIC,7,124,190,55
+    CONTROL         "Save &boards",565,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,132,86,10
+    CONTROL         "&Save messages",567,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,108,132,84,10
+    EDITTEXT        106,13,146,159,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",107,176,146,16,14
+    CONTROL         "&Gomotur format (*.rec)",572,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,164,92,10
+    CONTROL         "Onl&y losses",573,"Button",BS_AUTOCHECKBOX | BS_LEFT | WS_TABSTOP,108,164,78,10
     RTEXT           "&Repeat count:",561,201,7,71,8
     EDITTEXT        102,279,4,29,14,ES_NUMBER
     RTEXT           "Games cou&nt:",562,201,24,71,8
@@ -307,19 +307,23 @@ BEGIN
     LTEXT           "MB",IDC_STATIC,294,172,19,8
     CONTROL         "Automatic opening mo&ves",545,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,209,189,136,10
     CONTROL         "&Openings are randomly rotated",568,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,209,202,136,10
-    GROUPBOX        "",IDC_STATIC,207,210,126,45
-    CONTROL         "five or mo&re stones win",555,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,214,218,114,10
-    CONTROL         "e&xactly five stones win",556,"Button",BS_AUTORADIOBUTTON,214,230,114,10
-    CONTROL         "renju rule",557,"Button",BS_AUTORADIOBUTTON,214,242,114,10
-    GROUPBOX        "",IDC_STATIC,207,254,126,34
-    CONTROL         "&Local computer",575,"Button",BS_AUTORADIOBUTTON | WS_GROUP,214,262,114,10
-    CONTROL         "Networ&k",576,"Button",BS_AUTORADIOBUTTON,214,274,114,10
-    CTEXT           "TCP/IP  &port:",592,203,294,64,8
-    EDITTEXT        110,271,291,35,14,ES_AUTOHSCROLL | ES_NUMBER
-    LTEXT           "Command to e&xecute after each game:",578,7,227,183,8
-    EDITTEXT        113,7,239,190,14,ES_AUTOHSCROLL
-    LTEXT           "Command to execute &when a tournament finished:",579,7,257,182,8
-    EDITTEXT        114,7,269,190,14,ES_AUTOHSCROLL
+    GROUPBOX        "",IDC_STATIC,207,213,126,47
+    CONTROL         "five or mo&re stones win",555,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,214,221,114,10
+    CONTROL         "e&xactly five stones win",556,"Button",BS_AUTORADIOBUTTON,214,234,114,10
+    CONTROL         "renju rule",557,"Button",BS_AUTORADIOBUTTON,214,247,114,10
+    GROUPBOX        "",IDC_STATIC,207,260,126,35
+    CONTROL         "&Local computer",575,"Button",BS_AUTORADIOBUTTON | WS_GROUP,214,269,114,10
+    CONTROL         "Networ&k",576,"Button",BS_AUTORADIOBUTTON,214,282,114,10
+    CTEXT           "TCP/IP  &port:",592,203,303,64,8
+    EDITTEXT        110,271,300,35,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Command to e&xecute after each game:",578,7,241,183,8
+    EDITTEXT        113,7,252,190,14,ES_AUTOHSCROLL
+    LTEXT           "Command to execute &when a tournament finished:",579,7,270,182,8
+    EDITTEXT        114,7,281,190,14,ES_AUTOHSCROLL
+    GROUPBOX        "ELO baseline setting",582,7,183,190,54
+    CONTROL         "Use tournament PGN files",581,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,195,121,10
+    EDITTEXT        584,13,211,178,21,ES_MULTILINE | ES_AUTOHSCROLL | WS_VSCROLL
+    PUSHBUTTON      "A&dd",564,129,5,50,14
 END
 
 RESULT DIALOGEX 0, 0, 200, 182
@@ -500,6 +504,23 @@ LOG AFX_DIALOG_LAYOUT
 BEGIN
     0
 END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    "TOURNAMENT", DIALOG
+    BEGIN
+        RIGHTMARGIN, 345
+        BOTTOMMARGIN, 313
+    END
+END
+#endif    // APSTUDIO_INVOKED
 
 #endif    // 捷克语(捷克共和国) resources
 /////////////////////////////////////////////////////////////////////////////

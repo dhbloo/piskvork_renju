@@ -125,6 +125,7 @@ turNplayers = 0,  //number of tournament players
 turRecord = 0,    //save games
 turOnlyLosses = 0,//save only games which the first player lost
 turFormat = 1,    //1=psq,2=rec
+turUsePGN = 0,
 turNet = 0,       //0=local computer, 1=network
 turTieRepeat = 1, //maximal repeat count when it's a tie
 turTieCounter,  //current number of sequential ties
@@ -176,6 +177,7 @@ DWORD lastTick;  //last move time (getTickCount())
 
 char *title;     //window caption
 char turPlayerStr[50000]; //tournament players EXE file names
+char pgnFilenameStr[10000]; //pgn file names
 
 Psquare
 hilited = 0;      //hilited square
@@ -266,6 +268,7 @@ struct Treg { char *s; int *i; } regVal[] = {
 	{"tournamentRec", &turRecord},
 	{"tournamentRecFormat", &turFormat},
 	{"saveMsg", &turLogMsg},
+    {"usePGN", &turUsePGN},
 	{"onlyLosses", &turOnlyLosses},
 	{"flipHoriz", &flipHoriz},
 	{"flipVert", &flipVert},
@@ -316,6 +319,7 @@ struct Tregs { char *s; char *i; DWORD n; } regValS[] = {
 	{"AI0", players[0].brain, sizeof(players[0].brain)},
 	{"AI1", players[1].brain, sizeof(players[1].brain)},
 	{"tournamentPlayers", turPlayerStr, sizeof(turPlayerStr)},
+    {"usePGNFile", pgnFilenameStr, sizeof(pgnFilenameStr) },
 	{"tournamentFolder", fntur, sizeof(fntur)},
 	{"servername", servername, sizeof(servername)},
 	{"AIfolder", AIfolder, sizeof(AIfolder)},
@@ -1724,6 +1728,39 @@ void turAddAI(bool noPath) {
 	}
 }
 
+void turAddPGN(bool noPath) {
+	char *s, *d, *path;
+	int i, j;
+
+	d = strchr(pgnFilenameStr, 0);
+	if (d > pgnFilenameStr && d[-1] != '\n') { *d++ = '\r'; *d++ = '\n'; }
+	path = pgnOfn.lpstrFile;
+	i = (int)strlen(path);
+	s = path + i + 1;
+	if (!*s) {
+		//one file
+		if (noPath) path = cutPath(path);
+		strncpy(d, path, sizeof(pgnFilenameStr) - (d - pgnFilenameStr) - 1);
+	} else {
+		//multiple files
+		for (; *s; s++) {
+			j = (int)strlen(s);
+			if ((d - pgnFilenameStr) + i + j + 4 > sizeof(pgnFilenameStr)) break;
+			if (!noPath) {
+				strcpy(d, path);
+				d += i;
+				*d++ = '\\';
+			}
+			strcpy(d, s);
+			d += j;
+			*d++ = '\r';
+			*d++ = '\n';
+			s += j;
+		}
+		*d = 0;
+	}
+}
+
 BOOL CALLBACK TurProc(HWND hWnd, UINT msg, WPARAM wP, LPARAM) {
 	BOOL e;
 	int i, id;
@@ -1743,6 +1780,7 @@ BOOL CALLBACK TurProc(HWND hWnd, UINT msg, WPARAM wP, LPARAM) {
 		{&autoBegin, 545},
 		{&turLogMsg, 567},
 		{&openingRandomShiftT, 568},
+	    {&turUsePGN, 581},
 	};
 
 	switch (msg) {
@@ -1750,6 +1788,7 @@ BOOL CALLBACK TurProc(HWND hWnd, UINT msg, WPARAM wP, LPARAM) {
 	case WM_INITDIALOG:
 		setDlgTexts(hWnd, 15);
 		SetDlgItemText(hWnd, 101, turPlayerStr);
+		SetDlgItemText(hWnd, 584, pgnFilenameStr);
 		SetDlgItemText(hWnd, 106, fntur);
 		SetDlgItemText(hWnd, 113, cmdGameEnd);
 		SetDlgItemText(hWnd, 114, cmdTurEnd);
@@ -1771,6 +1810,7 @@ BOOL CALLBACK TurProc(HWND hWnd, UINT msg, WPARAM wP, LPARAM) {
 				}
 		}
 		PostMessage(hWnd, WM_COMMAND, 565, 0);
+		PostMessage(hWnd, WM_COMMAND, 581, 0);
 		PostMessage(hWnd, WM_COMMAND, 576, 0);
 		return 1;
 
@@ -1787,10 +1827,24 @@ BOOL CALLBACK TurProc(HWND hWnd, UINT msg, WPARAM wP, LPARAM) {
 				SetDlgItemText(hWnd, 101, turPlayerStr);
 			}
 			break;
+		case 583: //find pgn on disk
+			pgnOfn.hwndOwner = hWnd;
+			pgnOfn.Flags = OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_READONLY | OFN_ALLOWMULTISELECT | OFN_EXPLORER;
+			*pgnOfn.lpstrFile = 0;
+			if (GetOpenFileName(&pgnOfn)) {
+				GetDlgItemText(hWnd, 584, pgnFilenameStr, sizeof(pgnFilenameStr) - 2);
+				turAddPGN(false);
+				SetDlgItemText(hWnd, 584, pgnFilenameStr);
+			}
+			break;
 		case 565: //save games to
 			e = (BOOL)IsDlgButtonChecked(hWnd, 565);
 			EnableWindow(GetDlgItem(hWnd, 572), e);
 			EnableWindow(GetDlgItem(hWnd, 573), e);
+			break;
+		case 581: //use pgn
+			e = (BOOL)IsDlgButtonChecked(hWnd, 581);
+			EnableWindow(GetDlgItem(hWnd, 584), e);
 			break;
 		case 575: //local
 		case 576: //network
@@ -1817,12 +1871,14 @@ BOOL CALLBACK TurProc(HWND hWnd, UINT msg, WPARAM wP, LPARAM) {
 		case IDOK:
 			if (!checkDir(hWnd, 106)) break;
 			GetDlgItemText(hWnd, 101, turPlayerStr, sizeof(turPlayerStr));
+			GetDlgItemText(hWnd, 584, pgnFilenameStr, sizeof(pgnFilenameStr));
 			GetDlgItemText(hWnd, 106, fntur, sizeof(fntur));
 			GetDlgItemText(hWnd, 113, cmdGameEnd, sizeof(cmdGameEnd));
 			GetDlgItemText(hWnd, 114, cmdTurEnd, sizeof(cmdTurEnd));
 			turRule = getRadioButton(hWnd, 570, 571); //radio is not visible when starting tournament
 			turNet = getRadioButton(hWnd, 575, 576);
 			ruleFive = getRadioButton(hWnd, 555, 557);
+			turUsePGN = IsDlgButtonChecked(hWnd, 581);
 			turFormat = 1 + IsDlgButtonChecked(hWnd, 572);
 			for (i = 0; i < sizeof(D) / sizeof(*D); i++) {
 				id = D[i].id;
