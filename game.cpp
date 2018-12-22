@@ -476,29 +476,53 @@ std::vector<std::string> split(const std::string &s, char delim) {
 	return elems;
 }
 
-bool writeTempResultPgn(char * fn, int & matchesWritten) {
+bool writeResultPgn(char * fn, int & matchesWritten) {
 	FILE *f;
-	int i, j, s1, s2, s3, s;
+	TfileName name_i, name_j;
+	int i, j, draw, s;
 
 	f = fopen(fn, "wt");
 	if (f) {
 		for (i = 0; i < turNplayers; i++) {
 			for (j = i + 1; j < turNplayers; j++) {
-				s1 = getCell(i, j)->sum();
-				s2 = getCell(j, i)->sum();
-				s3 = getCell(i, j)->draw + getCell(j, i)->draw;
-				for (s = 0; s < s1; s++) {
-					fprintf(f, "[Black \"%d\"]\n[White \"%d\"]\n[Result \"1-0\"]\n\n1. a1 a2 1-0\n\n", i, j);
-					matchesWritten++;
-				}
-				for (s = 0; s < s2; s++) {
-					fprintf(f, "[Black \"%d\"]\n[White \"%d\"]\n[Result \"0-1\"]\n\n1. a1 a2 0-1\n\n", i, j);
-					matchesWritten++;
-				}
-				for (s = 0; s < s3; s++) {
-					fprintf(f, "[Black \"%d\"]\n[White \"%d\"]\n[Result \"1/2-1/2\"]\n\n1. a1 a2 1/2-1/2\n\n", i, j);
-					matchesWritten++;
-				}
+				TturCell * c1 = getCell(i, j);
+				TturCell * c2 = getCell(j, i);
+				draw = c1->draw + c2->draw;
+				turGetBrain(i, name_i, sizeof(name_i), true);
+				turGetBrain(j, name_j, sizeof(name_j), true);
+
+				for (s = 0; s < c1->start; s++)
+					fprintf(f, "[Black \"%s\"]\n[White \"%s\"]\n[Result \"1-0\"]\n\n1. a1 1-0\n\n", name_i, name_j);
+
+				for (s = 0; s < c1->notStart; s++)
+					fprintf(f, "[White \"%s\"]\n[Black \"%s\"]\n[Result \"1-0\"]\n\n1. a1 1-0\n\n", name_i, name_j);
+				
+				for (s = 0; s < c1->error; s++)
+					if (s & 1)
+						fprintf(f, "[Black \"%s\"]\n[White \"%s\"]\n[Result \"1-0\"]\n\n1. a1 1-0\n\n", name_i, name_j);
+					else
+						fprintf(f, "[White \"%s\"]\n[Black \"%s\"]\n[Result \"1-0\"]\n\n1. a1 1-0\n\n", name_i, name_j);
+
+				for (s = 0; s < c2->start; s++)
+					fprintf(f, "[Black \"%s\"]\n[White \"%s\"]\n[Result \"1-0\"]\n\n1. a1 1-0\n\n", name_j, name_i);
+
+				for (s = 0; s < c2->notStart; s++)
+					fprintf(f, "[Black \"%s\"]\n[White \"%s\"]\n[Result \"1-0\"]\n\n1. a1 1-0\n\n", name_j, name_i);
+
+				for (s = 0; s < c2->error; s++)
+					if (s & 1)
+						fprintf(f, "[Black \"%s\"]\n[White \"%s\"]\n[Result \"1-0\"]\n\n1. a1 1-0\n\n", name_j, name_i);
+					else
+						fprintf(f, "[White \"%s\"]\n[Black \"%s\"]\n[Result \"1-0\"]\n\n1. a1 1-0\n\n", name_j, name_i);
+
+				for (s = 0; s < draw; s++)
+					if (s & 1)
+						fprintf(f, "[Black \"%s\"]\n[White \"%s\"]\n[Result \"1/2-1/2\"]\n\n1. a1 1/2-1/2\n\n", name_i, name_j);
+					else
+						fprintf(f, "[White \"%s\"]\n[Black \"%s\"]\n[Result \"1/2-1/2\"]\n\n1. a1 1/2-1/2\n\n", name_j, name_i);
+			
+				matchesWritten += c1->start + c1->notStart + c1->error;
+				matchesWritten += c2->start + c2->notStart + c2->error;
 			}
 		}
 		fclose(f);
@@ -538,7 +562,7 @@ bool calcBayesElo() {
 	strcat(pgnFileName, "_tempResult.pgn");
 
 	int matchesWritten = 0;
-	if (!writeTempResultPgn(pgnFileName, matchesWritten))
+	if (!writeResultPgn(pgnFileName, matchesWritten))
 		return false;
 	if (!matchesWritten)
 		return true;
@@ -575,14 +599,14 @@ bool calcBayesElo() {
 	WriteFile(g_hChildStd_IN_Wr, "mm\n", 3, &dwWritten, NULL);
 	FlushFileBuffers(g_hChildStd_IN_Wr);
 
-	Sleep(12);
+	Sleep(15);
 	ReadFile(g_hChildStd_OUT_Rd, buf, 65536, &dwRead, NULL);
 
 	WriteFile(g_hChildStd_IN_Wr, "ratings\n", 8, &dwWritten, NULL);
 	FlushFileBuffers(g_hChildStd_IN_Wr);
 	memset(buf, 0, dwRead);
 	while (!bytesAvail) {
-		Sleep(20);
+		Sleep(30);
 		PeekNamedPipe(g_hChildStd_OUT_Rd, NULL, 0, NULL, &bytesAvail, NULL);
 	}
 	ReadFile(g_hChildStd_OUT_Rd, buf, 65536, &dwRead, NULL);
@@ -604,10 +628,13 @@ bool calcBayesElo() {
 	for (size_t i = 1; i < lines.size(); i++) {
 		auto elem = split(lines[i], ' ');
 		if (elem.size() >= 3) {
-			int index = atoi(elem[1].c_str());
-			if (index >= 0 && index < turNplayers) {
-				turTable[index].elo = atoi(elem[2].c_str());
-				eloReaded++;
+			for (int index = 0; index < turNplayers; index++) {
+				turGetBrain(index, buf, sizeof(buf), true);
+				if (elem[1] == buf) {
+					turTable[index].elo = atoi(elem[2].c_str());
+					eloReaded++;
+					break;
+				}
 			}
 		}
 	}

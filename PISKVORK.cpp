@@ -193,7 +193,7 @@ autoBeginForce = false, //automatic tournament opening even if autoBegin = 0
 tmpPsq = false; //generate tmp_....psq file in net tournament on the client (from version 8.4 by Tomas Kubes)
 
 
-TfileName fnrec, fnskin, fnbrain, fnstate, TahDat, PlochaDat, TimeOutsDat, MsgDat, InfoDat, cmdlineGameOutFile, cmdlineLogMsgOutFile, cmdlineLogPipeOutFile;
+TfileName fnrec, fnskin, fnbrain, fnstate, fnPGN, TahDat, PlochaDat, TimeOutsDat, MsgDat, InfoDat, cmdlineGameOutFile, cmdlineLogMsgOutFile, cmdlineLogPipeOutFile;
 TdirName fntur, tempDir, dataDir;
 Txywh mainPos = { 50, 15, 0, 0 }, logPos = { 500, 40, 0, 0 }, msgPos = { 500, -1, 0, 0 }, resultPos;
 
@@ -232,6 +232,11 @@ OPENFILENAME stateOfn = {
 	sizeof(OPENFILENAME), 0, 0, 0, 0, 0, 1,
 	fnstate, sizeof(fnstate),
 	0, 0, 0, 0, 0, 0, 0, "TUR", 0, 0, 0
+};
+OPENFILENAME pgnOfn = {
+	sizeof(OPENFILENAME), 0, 0, 0, 0, 0, 1,
+	fnPGN, sizeof(fnPGN),
+	0, 0, 0, 0, 0, 0, 0, "PGN", 0, 0, 0
 };
 
 const char
@@ -2088,6 +2093,7 @@ void langChanged() {
 	skinOfn.lpstrFilter = lng(500, "Skins (*.bmp)\0*.bmp\0");
 	brainOfn.lpstrFilter = lng(802, "Artifical inteligence (*.exe,*.zip)\0*.exe;*.com;*.bat;*.zip\0");
 	stateOfn.lpstrFilter = lng(814, "Tournament state (*.tur)\0*.tur\0");
+	pgnOfn.lpstrFilter = lng(821, "PGN record (*.pgn)\0*.pgn\0");
 	//create dialog windows
 	changeDialog(logDlg, logPos, "LOG", (DLGPROC)LogProc);
 	changeDialog(resultDlg, resultPos, "RESULT", (DLGPROC)ResultProc);
@@ -2149,6 +2155,22 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT mesg, WPARAM wP, LPARAM lP) {
 			break;
 		case 107: //save position
 			savePsq();
+			break;
+		case 109: //save PGN
+			saveLock++;
+			for (;;) {
+				pgnOfn.hwndOwner = hWin;
+				pgnOfn.Flags = OFN_HIDEREADONLY | OFN_PATHMUSTEXIST;
+				if (GetSaveFileName(&pgnOfn)) {
+					int matchCount;
+					writeResultPgn(pgnOfn.lpstrFile, matchCount);
+					break; //ok
+				}
+				if (CommDlgExtendedError() != FNERR_INVALIDFILENAME
+					|| !pgnOfn.lpstrFile[0]) break; //cancel
+				pgnOfn.lpstrFile[0] = 0;
+			}
+			saveLock--;
 			break;
 		case 108: //ESC
 			hardPause();

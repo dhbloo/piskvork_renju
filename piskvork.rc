@@ -40,6 +40,7 @@ BEGIN
     BEGIN
         MENUITEM "&Open...",                    106
         MENUITEM "&Save...",                    107
+        MENUITEM "Save result PGN...",          109
         MENUITEM SEPARATOR
         MENUITEM "&Keyboard shortcuts...",      230
         POPUP "Language"
@@ -233,7 +234,7 @@ END
 PLAYERS DIALOGEX 0, 0, 222, 218
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Players"
-FONT 8, "MS Shell Dlg"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     GROUPBOX        "Player 1",520,7,5,208,74
     CONTROL         "Computer",522,"Button",BS_AUTORADIOBUTTON,19,17,84,10
@@ -324,7 +325,7 @@ END
 RESULT DIALOGEX 0, 0, 200, 182
 STYLE DS_SETFONT | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
 CAPTION "Tournament result"
-FONT 10, "MS Shell Dlg"
+FONT 10, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,7,161,41,14
     PUSHBUTTON      "&Table",606,53,161,45,14
@@ -335,7 +336,7 @@ END
 GOTO DIALOGEX 0, 0, 151, 55
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Go to move"
-FONT 8, "MS Shell Dlg"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     CTEXT           "Move number:",580,7,10,79,8
     EDITTEXT        101,94,7,40,14,ES_AUTOHSCROLL | ES_NUMBER
@@ -346,7 +347,7 @@ END
 CLIENT DIALOGEX 0, 0, 186, 173
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Client"
-FONT 8, "MS Shell Dlg"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     GROUPBOX        "",IDC_STATIC,7,2,172,36,WS_GROUP
     CONTROL         "Connect to an AIs &tournament",597,"Button",BS_AUTORADIOBUTTON,13,11,158,10
@@ -365,7 +366,7 @@ END
 DISCONNECT DIALOGEX 0, 0, 125, 71
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Disconnect"
-FONT 8, "MS Shell Dlg"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,7,50,50,14
     PUSHBUTTON      "Cancel",IDCANCEL,68,50,50,14
@@ -388,7 +389,7 @@ END
 MSG DIALOGEX 0, 0, 198, 82
 STYLE DS_SETFONT | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
 CAPTION "Send message to the other player"
-FONT 10, "MS Shell Dlg"
+FONT 10, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     EDITTEXT        101,7,3,184,56,ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL
     DEFPUSHBUTTON   "Send",9,26,64,50,14
@@ -398,7 +399,7 @@ END
 KEYS DIALOGEX 0, 0, 234, 54
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Keyboard shortcuts"
-FONT 8, "MS Shell Dlg"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     LTEXT           "Command:",698,7,9,51,8
     EDITTEXT        172,61,7,144,14,ES_AUTOHSCROLL | ES_READONLY | NOT WS_TABSTOP
@@ -478,98 +479,6 @@ BEGIN
         VALUE "Translation", 0x405, 1200
     END
 END
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// DESIGNINFO
-//
-
-#ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO
-BEGIN
-    "OPTIONS", DIALOGEX
-    BEGIN
-        LEFTMARGIN, 4
-        RIGHTMARGIN, 308
-        VERTGUIDE, 147
-        BOTTOMMARGIN, 310
-        HORZGUIDE, 203
-    END
-
-    "ABOUT", DIALOGEX
-    BEGIN
-    END
-
-    "PLAYERS", DIALOGEX
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 215
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 211
-    END
-
-    "TOURNAMENT", DIALOGEX
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 337
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 306
-    END
-
-    "RESULT", DIALOGEX
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 193
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 175
-    END
-
-    "GOTO", DIALOGEX
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 144
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 48
-    END
-
-    "CLIENT", DIALOGEX
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 179
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 166
-    END
-
-    "DISCONNECT", DIALOGEX
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 118
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 64
-    END
-
-    "LOG", DIALOGEX
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 193
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 161
-    END
-
-    "MSG", DIALOGEX
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 191
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 78
-    END
-
-    "KEYS", DIALOGEX
-    BEGIN
-    END
-END
-#endif    // APSTUDIO_INVOKED
 
 
 /////////////////////////////////////////////////////////////////////////////
