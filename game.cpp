@@ -1301,6 +1301,8 @@ void restartGame() {
 	resume();
 }
 
+bool checkforbid(Psquare px, Psquare board, int move, int size);
+
 //-----------------------------------------------------------------
 //put symbol at square p, switch players
 //action: 0=local turn, 1=network turn, 2=file opened, 3=redo
@@ -1311,8 +1313,7 @@ bool doMove1(Psquare p, int action) {
 	Psquare p1, p2, lastMove0;
 
 	lastMove0 = lastMove;
-	bool checkforbid(Psquare px, Psquare board, int move, int size);
-	int f = checkforbid(p, lastMove, moves, width);
+	int f = ruleFive == 2 ? checkforbid(p, lastMove, moves, width) : 0;
 
 	if (finished || p < boardb || p >= boardk || p->z) return false;
 	p->z = player + 1;
@@ -1417,7 +1418,7 @@ bool doMove1(Psquare p, int action) {
 				wrGameResult();
 			}
 			//draw a line
-			if (!f || ruleFive != 2) {
+			if (!f) {
 				for (;; prvP(p2, 1)) {
 					p2->winLineDir = s;
 					p2->winLineStart = p1;
