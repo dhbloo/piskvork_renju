@@ -2922,6 +2922,9 @@ int pascal WinMain(HINSTANCE hInstance, HINSTANCE hPrevInst, LPSTR, int cmdShow)
 		openPsq(psqArg);
 	}
 
+	//enables away mode
+	SetThreadExecutionState(ES_AWAYMODE_REQUIRED | ES_SYSTEM_REQUIRED | ES_CONTINUOUS);
+
 	while (GetMessage(&mesg, NULL, 0, 0) == TRUE)
 		if (mesg.hwnd == msgWnd || !TranslateAccelerator(hWin, haccel, &mesg)) {
 			if (!logDlg || !IsDialogMessage(logDlg, &mesg))
@@ -2931,6 +2934,9 @@ int pascal WinMain(HINSTANCE hInstance, HINSTANCE hPrevInst, LPSTR, int cmdShow)
 						DispatchMessage(&mesg);
 					}
 		}
+
+	//disable away mode
+	SetThreadExecutionState(ES_CONTINUOUS);
 
 	delDir(tempDir, true);
 	FreeLibrary(psapi);

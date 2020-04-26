@@ -614,14 +614,14 @@ bool calcBayesElo() {
 	WriteFile(g_hChildStd_IN_Wr, "mm\n", 3, &dwWritten, NULL);
 	FlushFileBuffers(g_hChildStd_IN_Wr);
 
-	Sleep(20);
+	Sleep(50);  //to avoid reading empty result
 	ReadFile(g_hChildStd_OUT_Rd, buf, 65536, &dwRead, NULL);
 
 	WriteFile(g_hChildStd_IN_Wr, "ratings\n", 8, &dwWritten, NULL);
 	FlushFileBuffers(g_hChildStd_IN_Wr);
 	memset(buf, 0, dwRead);
 	while (!bytesAvail) {
-		Sleep(40);
+		Sleep(50);
 		PeekNamedPipe(g_hChildStd_OUT_Rd, NULL, 0, NULL, &bytesAvail, NULL);
 	}
 	ReadFile(g_hChildStd_OUT_Rd, buf, 65536, &dwRead, NULL);

@@ -263,14 +263,14 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,118,197,50,14
 END
 
-TOURNAMENT DIALOGEX 0, 0, 346, 323
+TOURNAMENT DIALOGEX 0, 0, 346, 327
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Tournament"
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,10,302,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,75,302,50,14
-    PUSHBUTTON      "Continue",569,147,302,50,14
+    DEFPUSHBUTTON   "OK",IDOK,10,306,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,75,306,50,14
+    PUSHBUTTON      "Continue",569,147,306,50,14
     LTEXT           "Players  (EXE or &ZIP files):",563,15,8,95,8
     EDITTEXT        101,7,22,190,101,ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_WANTRETURN | WS_VSCROLL
     PUSHBUTTON      "A&dd",583,141,193,50,14
@@ -307,22 +307,22 @@ BEGIN
     LTEXT           "MB",IDC_STATIC,294,172,19,8
     CONTROL         "Automatic opening mo&ves",545,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,209,189,136,10
     CONTROL         "&Openings are randomly rotated",568,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,209,202,136,10
-    GROUPBOX        "",IDC_STATIC,207,213,126,47
+    GROUPBOX        "",IDC_STATIC,207,213,126,48
     CONTROL         "five or mo&re stones win",555,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,214,221,114,10
     CONTROL         "e&xactly five stones win",556,"Button",BS_AUTORADIOBUTTON,214,234,114,10
     CONTROL         "renju rule",557,"Button",BS_AUTORADIOBUTTON,214,247,114,10
-    GROUPBOX        "",IDC_STATIC,207,260,126,35
-    CONTROL         "&Local computer",575,"Button",BS_AUTORADIOBUTTON | WS_GROUP,214,269,114,10
-    CONTROL         "Networ&k",576,"Button",BS_AUTORADIOBUTTON,214,282,114,10
-    CTEXT           "TCP/IP  &port:",592,203,303,64,8
-    EDITTEXT        110,271,300,35,14,ES_AUTOHSCROLL | ES_NUMBER
-    LTEXT           "Command to e&xecute after each game:",578,7,241,183,8
-    EDITTEXT        113,7,252,190,14,ES_AUTOHSCROLL
-    LTEXT           "Command to execute &when a tournament finished:",579,7,270,182,8
-    EDITTEXT        114,7,281,190,14,ES_AUTOHSCROLL
-    GROUPBOX        "ELO baseline setting",582,7,183,190,54
+    GROUPBOX        "",IDC_STATIC,207,263,126,35
+    CONTROL         "&Local computer",575,"Button",BS_AUTORADIOBUTTON | WS_GROUP,214,272,114,10
+    CONTROL         "Networ&k",576,"Button",BS_AUTORADIOBUTTON,214,285,114,10
+    CTEXT           "TCP/IP  &port:",592,203,307,64,8
+    EDITTEXT        110,271,304,35,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Command to e&xecute after each game:",578,7,243,183,8
+    EDITTEXT        113,7,254,190,14,ES_AUTOHSCROLL
+    LTEXT           "Command to execute &when a tournament finished:",579,7,272,182,8
+    EDITTEXT        114,7,283,190,14,ES_AUTOHSCROLL
+    GROUPBOX        "ELO baseline setting",582,7,183,190,56
     CONTROL         "Use tournament PGN files",581,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,195,121,10
-    EDITTEXT        584,13,211,178,21,ES_MULTILINE | ES_AUTOHSCROLL | WS_VSCROLL
+    EDITTEXT        584,13,212,178,21,ES_MULTILINE | ES_AUTOHSCROLL | WS_VSCROLL
     PUSHBUTTON      "A&dd",564,129,5,50,14
 END
 
@@ -514,10 +514,50 @@ END
 #ifdef APSTUDIO_INVOKED
 GUIDELINES DESIGNINFO
 BEGIN
+    "OPTIONS", DIALOG
+    BEGIN
+    END
+
+    "ABOUT", DIALOG
+    BEGIN
+    END
+
+    "PLAYERS", DIALOG
+    BEGIN
+    END
+
     "TOURNAMENT", DIALOG
     BEGIN
         RIGHTMARGIN, 345
-        BOTTOMMARGIN, 313
+        BOTTOMMARGIN, 317
+    END
+
+    "RESULT", DIALOG
+    BEGIN
+    END
+
+    "GOTO", DIALOG
+    BEGIN
+    END
+
+    "CLIENT", DIALOG
+    BEGIN
+    END
+
+    "DISCONNECT", DIALOG
+    BEGIN
+    END
+
+    "LOG", DIALOG
+    BEGIN
+    END
+
+    "MSG", DIALOG
+    BEGIN
+    END
+
+    "KEYS", DIALOG
+    BEGIN
     END
 END
 #endif    // APSTUDIO_INVOKED
