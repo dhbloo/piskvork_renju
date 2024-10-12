@@ -611,7 +611,7 @@ bool calcBayesElo() {
 	WriteFile(g_hChildStd_IN_Wr, "elo\n", 4, &dwWritten, NULL);
 	WriteFile(g_hChildStd_IN_Wr, "offset 1600\n", 12, &dwWritten, NULL);
 	WriteFile(g_hChildStd_IN_Wr, "advantage 0\n", 12, &dwWritten, NULL);
-	WriteFile(g_hChildStd_IN_Wr, "mm\n", 3, &dwWritten, NULL);
+	WriteFile(g_hChildStd_IN_Wr, "mm 0 1\n", 7, &dwWritten, NULL);
 	FlushFileBuffers(g_hChildStd_IN_Wr);
 
 	Sleep(50);  //to avoid reading empty result
